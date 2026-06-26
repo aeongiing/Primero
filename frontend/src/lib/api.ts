@@ -224,3 +224,21 @@ export function getMe(): Promise<MeOut> {
 export function getMetadataOptions(): Promise<unknown> {
   return request("/metadata/options", { auth: false });
 }
+
+export interface FitRequest {
+  category?: string;
+  size?: string;
+  gender?: string;
+  chest?: number | null;
+  shoulder?: number | null;
+  sleeve?: number | null;
+  total_length?: number | null;
+}
+/** 표기 사이즈 + 실측 → 정핏/오버핏 추천 텍스트 (인증 불필요) */
+export function fitRecommendation(body: FitRequest): Promise<{ text: string }> {
+  return request("/products/fit-recommendation", {
+    method: "POST",
+    body,
+    auth: false,
+  });
+}

@@ -1,11 +1,11 @@
 import type { Platform } from "@/types";
 
 export const PLATFORMS: Record<Platform, { label: string; color: string }> = {
-  // 1차 지원 (웹)
-  bunjang: { label: "번개장터", color: "#F03C00" },
-  joonggonara: { label: "중고나라", color: "#1AAE5A" },
-  fruits: { label: "Fruits", color: "#4CAF50" },
-  ebay: { label: "eBay", color: "#E53238" },
+  // 1차 지원 (웹) — 각 플랫폼 대표색
+  bunjang: { label: "번개장터", color: "#FA2828" },   // 번개 레드
+  joonggonara: { label: "중고나라", color: "#2DB400" }, // 중고나라 그린
+  fruits: { label: "Fruits", color: "#111111" },       // fruits 블랙(모노톤)
+  ebay: { label: "eBay", color: "#0064D2" },           // eBay 블루
   // 2차 지원 (모바일 단계)
   charan: { label: "차란", color: "#6366F1" },
   karrot: { label: "당근마켓", color: "#FF6F0F" },

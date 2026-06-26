@@ -14,6 +14,7 @@ import {
   analyzeImages,
   createProduct,
   uploadProductImages,
+  fitRecommendation,
   ApiError,
 } from "@/lib/api";
 
@@ -117,6 +118,11 @@ export default function UploadPage() {
   const [brand, setBrand] = useState("");
   const [chest, setChest] = useState("");
   const [length, setLength] = useState("");
+  const [shoulder, setShoulder] = useState("");
+  const [sleeve, setSleeve] = useState("");
+  const [fitText, setFitText] = useState("");
+  const [fitLoading, setFitLoading] = useState(false);
+  const [fitError, setFitError] = useState<string | null>(null);
   const [colors, setColors] = useState<string[]>([]);
   const [shippingFee, setShippingFee] = useState("");
   const [price, setPrice] = useState("");
@@ -194,6 +200,33 @@ export default function UploadPage() {
       );
     } finally {
       setAnalyzing(false);
+    }
+  };
+
+  // AI 핏 추천: 표기 사이즈 + 실측 → 정핏/오버핏 텍스트
+  const runFitRecommendation = async () => {
+    if (fitLoading) return;
+    setFitLoading(true);
+    setFitError(null);
+    try {
+      const { text } = await fitRecommendation({
+        category: major || undefined,
+        size: size || sizeLabel || undefined,
+        gender: gender || undefined,
+        chest: chest ? Number(chest) : null,
+        total_length: length ? Number(length) : null,
+        shoulder: shoulder ? Number(shoulder) : null,
+        sleeve: sleeve ? Number(sleeve) : null,
+      });
+      setFitText(text);
+    } catch (e) {
+      setFitError(
+        e instanceof ApiError
+          ? `핏 추천 실패: ${e.message}`
+          : "핏 추천에 실패했어요. 백엔드 서버를 확인해주세요."
+      );
+    } finally {
+      setFitLoading(false);
     }
   };
 
@@ -525,7 +558,38 @@ export default function UploadPage() {
             <div className="mt-2 grid grid-cols-2 gap-3">
               <input type="number" value={chest} onChange={(e) => setChest(e.target.value)} placeholder="가슴단면(cm)" className={inputCls} />
               <input type="number" value={length} onChange={(e) => setLength(e.target.value)} placeholder="총장(cm)" className={inputCls} />
+              <input type="number" value={shoulder} onChange={(e) => setShoulder(e.target.value)} placeholder="어깨너비(cm, 선택)" className={inputCls} />
+              <input type="number" value={sleeve} onChange={(e) => setSleeve(e.target.value)} placeholder="소매길이(cm, 선택)" className={inputCls} />
             </div>
+          </Field>
+
+          {/* AI 핏 추천 */}
+          <Field label="핏 추천" hint="표기 사이즈·실측 기반">
+            <button
+              type="button"
+              onClick={runFitRecommendation}
+              disabled={fitLoading}
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-primary bg-accent px-4 py-3 text-sm font-bold text-primary transition-colors hover:bg-accent/70 disabled:opacity-50"
+            >
+              {fitLoading ? "분석 중…" : "AI 핏 추천 받기 (정핏·오버핏)"}
+            </button>
+            {fitError && <p className="mt-1 text-xs text-destructive">{fitError}</p>}
+            {fitText && (
+              <div className="mt-2 rounded-md border border-border bg-muted/40 p-3">
+                <p className="whitespace-pre-line text-sm leading-relaxed">{fitText}</p>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setDescription((d) =>
+                      d ? `${d}\n\n[핏 추천]\n${fitText}` : `[핏 추천]\n${fitText}`
+                    )
+                  }
+                  className="mt-2 rounded-md border border-border px-2.5 py-1 text-xs font-medium transition-colors hover:bg-muted"
+                >
+                  설명에 추가
+                </button>
+              </div>
+            )}
           </Field>
 
           <Field label="상태" hint={`${condition.toFixed(1)}점 · ${grade.grade}`}>
