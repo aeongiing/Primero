@@ -1,0 +1,31 @@
+# Render Blueprint — ParaPara 백엔드(FastAPI) 배포
+# Render 대시보드에서 New > Blueprint 로 이 레포를 연결하면 자동 인식된다.
+# 문서: https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: parapara-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    region: singapore
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      # 자동 생성되는 시크릿 (소스에 평문 금지)
+      - key: JWT_SECRET
+        generateValue: true
+      # 아래 값들은 Render 대시보드에서 직접 입력 (sync:false = 비밀로 보관)
+      - key: DATABASE_URL
+        sync: false
+      - key: AWS_REGION
+        value: ap-northeast-2
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: S3_BUCKET
+        sync: false
+      - key: OPENCLAW_API_URL
+        sync: false

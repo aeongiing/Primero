@@ -57,9 +57,35 @@ npm run dev
 NEXT_PUBLIC_API_URL=   # 백엔드 API 주소
 ```
 
-## 백엔드 연동
+## 백엔드 (FastAPI)
 
-백엔드는 별도 레포에서 관리합니다. AWS 기반 (Lambda, ECS Fargate, RDS Aurora, S3, Rekognition, Bedrock)
+`backend/` 에 FastAPI 서버가 있습니다. Swagger 문서는 자동 생성됩니다.
+
+### 로컬 실행
+
+```bash
+cd backend
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+.venv/bin/uvicorn app.main:app --reload
+```
+
+- Swagger UI: http://localhost:8000/docs
+- ReDoc: http://localhost:8000/redoc
+- 플랫폼 메타데이터 API: http://localhost:8000/api/v1/metadata/options
+
+### 배포 (Render)
+
+`render.yaml` Blueprint가 포함돼 있습니다.
+
+1. GitHub에 푸시
+2. Render 대시보드 → **New > Blueprint** → 이 레포 연결
+3. `render.yaml` 자동 인식 → 대시보드에서 시크릿 환경변수(`DATABASE_URL`, AWS 키 등) 입력
+4. 배포 완료 후 공개 URL의 `/docs` 를 팀원에게 공유
+
+`JWT_SECRET`은 Render가 자동 생성하며, 비밀 값은 소스에 평문으로 두지 않습니다(`.env.example`만 커밋).
+
+> 향후 정식 운영은 AWS(ECS Fargate / Lambda + API Gateway, RDS Aurora, S3, Rekognition, Bedrock)로 이전합니다.
 
 ## 커밋 규칙
 
