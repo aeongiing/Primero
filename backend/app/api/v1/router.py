@@ -5,6 +5,7 @@ from app.api.v1.routes import (
     products,
     listings,
     platform_accounts,
+    media,
     metadata,
 )
 
@@ -14,4 +15,5 @@ api_router.include_router(auth.router)
 api_router.include_router(products.router)
 api_router.include_router(listings.router)
 api_router.include_router(platform_accounts.router)
+api_router.include_router(media.router)
 api_router.include_router(metadata.router)

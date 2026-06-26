@@ -37,5 +37,12 @@ class Product(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     user: Mapped["User"] = relationship(back_populates="products")
-    images: Mapped[list["ProductImage"]] = relationship(back_populates="product", order_by="ProductImage.order")
-    listings: Mapped[list["Listing"]] = relationship(back_populates="product")
+    images: Mapped[list["ProductImage"]] = relationship(
+        back_populates="product",
+        order_by="ProductImage.order",
+        cascade="all, delete-orphan",
+    )
+    listings: Mapped[list["Listing"]] = relationship(
+        back_populates="product",
+        cascade="all, delete-orphan",
+    )
