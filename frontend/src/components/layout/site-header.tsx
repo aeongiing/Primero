@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { getToken } from "@/lib/api";
+import { getToken, clearToken } from "@/lib/api";
 
 function SearchIcon() {
   return (
@@ -21,6 +21,12 @@ export default function SiteHeader() {
   useEffect(() => {
     setLoggedIn(!!getToken());
   }, [pathname]);
+
+  const handleLogout = () => {
+    clearToken();
+    setLoggedIn(false);
+    window.location.href = "/login";
+  };
 
   return (
     <header className="border-b">
@@ -63,9 +69,18 @@ export default function SiteHeader() {
 
           <nav className="flex items-center gap-6 text-[15px]">
             {loggedIn ? (
-              <Link href="/mypage" className="hover:text-brand transition-colors">
-                마이페이지
-              </Link>
+              <>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="hover:text-brand transition-colors"
+                >
+                  로그아웃
+                </button>
+                <Link href="/mypage" className="hover:text-brand transition-colors">
+                  마이페이지
+                </Link>
+              </>
             ) : (
               <Link href="/login" className="hover:text-brand transition-colors">
                 로그인
