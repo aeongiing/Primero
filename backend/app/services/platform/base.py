@@ -125,7 +125,12 @@ class FormPlatformAdapter(PlatformAdapter):
             if value is None or value == "":
                 continue
             await page.click(ps.trigger)
-            await page.click(f'{ps.scope} {ps.item}:has-text("{value}")')
+            if ps.exact:
+                await page.click(f'{ps.scope} >> text="{value}"')
+            else:
+                await page.click(f'{ps.scope} {ps.item}:has-text("{value}")')
+            if ps.confirm:
+                await page.click(ps.confirm)
 
         await page.click(self.spec.submit_selector)
 

@@ -231,3 +231,30 @@ async def test_popup_select_opens_and_picks_option():
 
     assert ("click", "#scroll-condition button") in page.records
     assert ("click", '#scroll-condition li:has-text("사용감 없음")') in page.records
+
+
+async def test_popup_select_exact_uses_text_equals():
+    # exact=True 면 정확 일치(text=) 셀렉터로 클릭한다(예: 사이즈 S vs XS).
+    ps_spec = PlatformFormSpec(
+        **{
+            **_SPEC.__dict__,
+            "fields": (FormField("title", "#title"),),
+            "popup_selects": (
+                PopupSelect("size", "#scroll-option button", 'ul[class*=_valueList_]', exact=True,
+                            confirm='[class*=_panel_] button:has-text("완료")'),
+            ),
+        }
+    )
+
+    class _SizeAdapter(FormPlatformAdapter):
+        spec = ps_spec
+
+    page = FakePage(texts={"#result-id": "X"})
+    adapter = _SizeAdapter(FakeBrowser(page))
+
+    payload = ListingPayload(fields={"title": "자켓", "size": "S"})
+    await adapter.create_listing(_creds(), payload)
+
+    assert ("click", "#scroll-option button") in page.records
+    assert ("click", 'ul[class*=_valueList_] >> text="S"') in page.records
+    assert ("click", '[class*=_panel_] button:has-text("완료")') in page.records

@@ -49,6 +49,8 @@ class PopupSelect:
     trigger: str
     scope: str
     item: str = "li"
+    exact: bool = False   # True 면 옵션을 '정확히 일치'(text=) 로 클릭(예: 사이즈 S vs XS)
+    confirm: str = ""     # (선택) 선택 후 닫기/확정 버튼(예: 사이즈 '완료')
 
 
 @dataclass(frozen=True)

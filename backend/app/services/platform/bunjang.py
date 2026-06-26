@@ -50,6 +50,10 @@ class BunjangAdapter(FormPlatformAdapter):
         # 사이즈는 카테고리 선택 후에야 나타나 의존성이 있어 추후 처리.
         popup_selects=(
             PopupSelect("condition", "#scroll-condition button", "#scroll-condition"),
+            # 사이즈: 카테고리 선택 후 나타남. 옵션 패널은 포털로 떠서 _valueList 로 스코프.
+            # S 가 XS/2XS 에 포함되므로 정확 일치(exact)로 클릭.
+            PopupSelect("size", "#scroll-option button", 'ul[class*=_valueList_]', exact=True,
+                        confirm='[class*=_panel_] button:has-text("완료")'),
         ),
         listing_id_selector="",    # TODO: 등록 후 결과 화면 캡처 후 채움
         listing_id_attribute=None,

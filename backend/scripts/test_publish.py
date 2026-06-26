@@ -34,6 +34,7 @@ _SAMPLE = {
         "price": "99000000",
         "description": "자동화 테스트 등록입니다. 판매하지 않으며 곧 삭제합니다.",
         "condition": "사용감 없음",
+        "size": "M",
     },
     "junggonara": {
         "category": "패션의류 > 여성의류",
@@ -119,11 +120,27 @@ def run(name: str) -> None:
             except Exception as exc:
                 print(f"  [경고] 사진 업로드 실패(수동 업로드 필요): {exc}")
 
+        # 팝업 선택(상품상태/사이즈 등)
+        for ps in spec.popup_selects:
+            val = data.get(ps.key)
+            if not val:
+                continue
+            try:
+                page.click(ps.trigger, timeout=5000)
+                if ps.exact:
+                    page.click(f'{ps.scope} >> text="{val}"', timeout=5000)
+                else:
+                    page.click(f'{ps.scope} {ps.item}:has-text("{val}")', timeout=5000)
+                if ps.confirm:
+                    page.click(ps.confirm, timeout=5000)
+                print(f"  팝업선택: {ps.key} = {val}")
+            except Exception as exc:
+                print(f"  [경고] {ps.key} 선택 실패: {exc}")
+
         print("\n" + "=" * 60)
         print("브라우저에서 폼이 잘 채워졌는지 확인하세요.")
-        print("⚠️ 카테고리는 자동 선택이 비활성입니다 → 직접 골라주세요.")
-        print("⚠️ 번개 '상품 상태'는 팝업이라 자동이 안 됩니다 → 직접 골라주세요.")
-        print("   (중고나라 상품상태는 자동 선택됩니다.)")
+        print("카테고리·상품상태·사이즈까지 자동 입력을 시도합니다.")
+        print("누락/오류 항목이 있으면 직접 채워주세요.")
         print("실제로 '등록하기' 까지 진행하려면 y 입력, 아니면 그냥 Enter.")
         print("=" * 60)
         answer = input("등록 진행? (y / Enter=취소) > ").strip().lower()
