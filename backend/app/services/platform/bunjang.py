@@ -12,8 +12,10 @@
 ⚠️ 미확정/추가 작업 필요:
   - 카테고리/상품상태: <select> 가 아니라 버튼→팝업(모달) 선택 방식이라 단순
     select_option 으로 처리 불가. 별도 멀티스텝 핸들러 필요(현재 fields 에서 제외).
-  - 로그인: 로그인 페이지 미캡처(소셜/휴대폰 인증 가능성). login 스펙 비움.
-  - 등록 후 상품 ID 추출, 판매완료 판정(sold), 삭제 흐름: 해당 화면 미캡처.
+  - 로그인: 번개장터는 전화번호 인증(SMS OTP) 기반. 자동화에서는 저장된
+    storage_state(쿠키/세션) 로 로그인을 우회한다. login spec 은 폼 로그인
+    폴백용으로 제공하되, 실제 운영은 세션 기반을 권장.
+  - 등록 후 상품 ID: 등록 성공 시 /products/{id} 로 리다이렉트되며 URL에서 추출.
   번개는 컨디션 등급 칸이 없어 컨디션은 description 에 포함된다(매핑 엔진 처리).
 """
 
@@ -27,11 +29,13 @@ class BunjangAdapter(FormPlatformAdapter):
     spec = PlatformFormSpec(
         platform="bunjang",
         login=LoginSpec(
-            url="",                # TODO: 로그인 페이지 캡처 후 채움
-            username_selector="",
-            password_selector="",
-            submit_selector="",
-            success_selector="",
+            # 번개장터는 전화번호 + SMS OTP 인증. 폼 로그인은 폴백용.
+            # 운영 시에는 storage_state(브라우저 세션 파일) 사용 권장.
+            url="https://m.bunjang.co.kr/login",
+            username_selector='input[placeholder*="전화번호"]',
+            password_selector='input[placeholder*="인증번호"]',
+            submit_selector='button[class*="_submitBtn_"]',
+            success_selector='a[href="/my"]',
         ),
         new_listing_url="https://m.bunjang.co.kr/products/new",
         fields=(
@@ -55,12 +59,17 @@ class BunjangAdapter(FormPlatformAdapter):
             PopupSelect("size", "#scroll-option button", 'ul[class*=_valueList_]', exact=True,
                         confirm='[class*=_panel_] button:has-text("완료")'),
         ),
-        listing_id_selector="",    # TODO: 등록 후 결과 화면 캡처 후 채움
-        listing_id_attribute=None,
-        listing_url_template="",
-        sold_selector="",
+        # 등록 후: /products/{id} 로 리다이렉트됨. URL 에서 ID 파싱하는 게 가장 신뢰도 높지만,
+        # DOM 셀렉터 기반으로도 상품 상세 페이지에서 data-pid 속성으로 추출 가능.
+        listing_id_selector='[data-pid]',
+        listing_id_attribute="data-pid",
+        listing_url_template="https://m.bunjang.co.kr/products/{id}",
+        sold_selector='div[class*="_statusBadge_"], span[class*="_saleBadge_"]',
         sold_marker="판매완료",
-        manage_url_template="",
-        delete_selector="",
-        delete_confirm_selector="",
+        manage_url_template="https://m.bunjang.co.kr/products/{id}/edit",
+        delete_selector='button:has-text("삭제")',
+        delete_confirm_selector='button[class*="_confirmBtn_"]:has-text("확인")',
+        # 가격 변경 (수정 페이지에서)
+        price_selector='input[placeholder^="가격을 입력"]',
+        save_selector='button[type="submit"]:has-text("수정")',
     )
