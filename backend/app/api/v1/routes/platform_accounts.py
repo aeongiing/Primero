@@ -40,58 +40,6 @@ class PlatformSessionCreate(BaseModel):
     session_data: dict  # Playwright storage_state 호환 JSON
 
 
-class PlatformTokenCreate(BaseModel):
-    """토큰 직접 입력 방식 연동(MVP).
-
-    사용자가 번개장터 등에서 인증 토큰(x-bun-auth-token)을 복사해 입력.
-    """
-    platform: str
-    token: str
-
-
-@router.post("/token", response_model=PlatformAccountOut, status_code=201)
-async def connect_token(
-    body: PlatformTokenCreate,
-    db: AsyncSession = Depends(get_db),
-    user_id: uuid.UUID = Depends(get_current_user_id),
-):
-    """인증 토큰을 직접 입력해 플랫폼 계정을 연동한다(MVP).
-
-    토큰은 PlatformAccount.credential_key 에 그대로 저장되어, 발행 시
-    HTTP API 어댑터의 인증 헤더로 사용된다.
-    """
-    if body.platform not in ACTIVE_PLATFORMS:
-        raise HTTPException(
-            status_code=422,
-            detail=f"지원하지 않는 플랫폼: {body.platform}. 가능: {list(ACTIVE_PLATFORMS)}",
-        )
-    if not body.token.strip():
-        raise HTTPException(status_code=422, detail="토큰이 비어 있습니다.")
-
-    result = await db.execute(
-        select(PlatformAccount).where(
-            PlatformAccount.user_id == user_id,
-            PlatformAccount.platform == body.platform,
-        )
-    )
-    account = result.scalar_one_or_none()
-    if account is None:
-        account = PlatformAccount(
-            user_id=user_id,
-            platform=body.platform,
-            credential_key=body.token.strip(),
-            is_active=True,
-        )
-        db.add(account)
-    else:
-        account.credential_key = body.token.strip()
-        account.is_active = True
-
-    await db.commit()
-    await db.refresh(account)
-    return account
-
-
 @router.get("", response_model=list[PlatformAccountOut])
 async def list_accounts(
     db: AsyncSession = Depends(get_db),

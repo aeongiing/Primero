@@ -12,17 +12,15 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.mapping import CanonicalProduct
 from app.models.listing import Listing, ListingStatus
-from app.models.platform_account import PlatformAccount
 from app.models.product import Product, ProductStatus
 from app.services.automation.publisher import publish_product, PublishStatus, PublishOutcome
 from app.services.platform.base import PlatformAdapter, ListingPayload
 from app.services.platform.browser import Credentials, PlaywrightBrowser
-from app.services.platform.registry import get_adapter, _API_ADAPTERS
+from app.services.platform.registry import get_adapter
 from app.core.config import settings
 
 # 세션 파일 디렉터리 (backend/auth/)
@@ -56,21 +54,15 @@ async def publish_to_platforms(
     """
     canonical = _to_canonical(product)
 
-    # 사용자가 연동한 플랫폼 계정(토큰/세션) 조회
-    acc_result = await db.execute(
-        select(PlatformAccount).where(
-            PlatformAccount.user_id == product.user_id,
-            PlatformAccount.is_active == True,
-        )
-    )
-    credential_map = {a.platform: a.credential_key for a in acc_result.scalars()}
+    # 브라우저 인스턴스(헤드리스) — 저장된 세션으로 이미 로그인된 상태로 시작.
+    # 각 플랫폼별 세션 파일: auth/bunjang.json, auth/junggonara.json
+    # 세션 파일이 없으면 발행 시 로그인 실패 → failed 로 기록됨.
+    browser = PlaywrightBrowser(headless=settings.browser_headless)
 
     def _adapter_for(platform: str) -> PlatformAdapter:
-        # HTTP API 어댑터(번개 등)는 브라우저 불필요.
-        if platform in _API_ADAPTERS:
-            return get_adapter(platform)
-        # 브라우저 어댑터: 세션 파일로 로그인 상태 주입
+        # 사용자별 세션 파일 경로 (platform_accounts 에서 저장한 것)
         user_session = _AUTH_DIR / "users" / str(product.user_id) / f"{platform}.json"
+        # fallback: 개발자 공용 세션(기존 save_login.py 로 저장한 것)
         dev_session = _AUTH_DIR / f"{platform}.json"
         storage = None
         if user_session.exists():
@@ -81,10 +73,8 @@ async def publish_to_platforms(
         return get_adapter(platform, pb)
 
     def _credentials_for(platform: str) -> Credentials:
-        # API 어댑터(번개): credential_key = 토큰 → username 에 전달.
-        # 브라우저 어댑터: 세션 기반이라 빈 값.
-        token = credential_map.get(platform, "")
-        return Credentials(username=token, password="")
+        # 세션 기반이라 username/password 불필요. 빈 값 전달(폼 로그인 생략됨).
+        return Credentials(username="", password="")
 
     try:
         outcomes = await publish_product(
@@ -94,7 +84,7 @@ async def publish_to_platforms(
             credentials_for=_credentials_for,
         )
     finally:
-        pass
+        pass  # 각 어댑터가 자체 browser를 가지므로 별도 정리 불필요
 
     # Listing 테이블에 기록
     results = []

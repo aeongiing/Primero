@@ -36,9 +36,6 @@ class _FakeAdapter(PlatformAdapter):
     async def delete_listing(self, credentials, platform_product_id):
         return None
 
-    async def update_price(self, credentials, platform_product_id, new_price):
-        return None
-
 
 def _product(**overrides) -> CanonicalProduct:
     base = dict(
