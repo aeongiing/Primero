@@ -44,8 +44,9 @@ app.add_middleware(
         "http://100.53.237.32:3000",  # 팀 내부 서버
         "https://paraparavintage.vercel.app",  # Vercel 프로덕션
         "https://paraparavintage-pdu3c4ru7-aeongiings-projects.vercel.app",  # Vercel Preview
+        "https://parapara-vintage.vercel.app",  # Vercel alias
     ],
-    allow_origin_regex=r"(http://localhost:\d+|https://.*\.vercel\.app)",
+    allow_origin_regex=r"(http://localhost:\d+|https://.*\.vercel\.app|https://.*\.ngrok-free\.app|https://.*\.ngrok-free\.dev)",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
