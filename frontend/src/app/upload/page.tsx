@@ -10,6 +10,12 @@ import {
   PLATFORMS,
 } from "@/lib/constants";
 import type { Platform } from "@/types";
+import {
+  analyzeImages,
+  createProduct,
+  uploadProductImages,
+  ApiError,
+} from "@/lib/api";
 
 function gradeFor(score: number) {
   return CONDITION_GRADES.find((g) => score >= g.min) ?? CONDITION_GRADES.at(-1)!;
@@ -88,7 +94,8 @@ function Radio({
 const inputCls =
   "h-11 w-full rounded-md border border-input px-3 text-sm outline-none focus:ring-2 focus:ring-ring";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+// joonggonara(프론트 표기) → junggonara(백엔드 표기)
+const toBackendPlatform = (p: string) => (p === "joonggonara" ? "junggonara" : p);
 
 type PhotoItem = { id: string; file: File; url: string };
 
@@ -117,6 +124,8 @@ export default function UploadPage() {
   const [platforms, setPlatforms] = useState<Platform[]>([...UPLOAD_PLATFORMS]);
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitMsg, setSubmitMsg] = useState<string | null>(null);
 
   const toggle = <T,>(list: T[], v: T, max?: number): T[] => {
     if (list.includes(v)) return list.filter((x) => x !== v);
@@ -164,16 +173,7 @@ export default function UploadPage() {
     setAnalyzing(true);
     setAnalyzeError(null);
     try {
-      const form = new FormData();
-      photos.forEach((p) => form.append("images", p.file));
-      const res = await fetch(`${API_BASE}/api/v1/products/analyze`, {
-        method: "POST",
-        body: form,
-      });
-      if (!res.ok) {
-        throw new Error(`AI 분석 실패 (${res.status}). 백엔드 서버·인증을 확인해주세요.`);
-      }
-      const d = await res.json();
+      const d = await analyzeImages(photos.map((p) => p.file));
       // AIAnalysisResult → 폼 필드 매핑 (인식 안 된 값은 채우지 않고 비워둠)
       if (d.title) setTitle(String(d.title).slice(0, 40));
       if (d.brand && d.brand !== "미상") setBrand(d.brand);
@@ -187,9 +187,67 @@ export default function UploadPage() {
       }
       if (d.size) setSize(String(d.size));
     } catch (e) {
-      setAnalyzeError(e instanceof Error ? e.message : "AI 분석에 실패했어요.");
+      setAnalyzeError(
+        e instanceof ApiError
+          ? `AI 분석 실패: ${e.message}`
+          : "AI 분석에 실패했어요. 백엔드 서버를 확인해주세요."
+      );
     } finally {
       setAnalyzing(false);
+    }
+  };
+
+  // 업로드/임시저장: 표준_상품 생성(+사진 S3 업로드)
+  const submit = async () => {
+    if (submitting) return;
+    if (!title.trim()) {
+      setSubmitMsg("상품명을 입력해주세요.");
+      return;
+    }
+    const priceNum = Number(price);
+    if (!priceNum || priceNum <= 0) {
+      setSubmitMsg("판매가를 입력해주세요.");
+      return;
+    }
+    setSubmitting(true);
+    setSubmitMsg(null);
+    try {
+      const product = await createProduct({
+        title: title.trim(),
+        brand: brand.trim(),
+        description: description.trim(),
+        category: major || gender || "",
+        condition: Math.min(10, Math.max(1, Math.round(condition))),
+        price: priceNum,
+        colors,
+        materials: [],
+        size: size || sizeLabel || null,
+        chest: chest ? Number(chest) : null,
+        total_length: length ? Number(length) : null,
+        platforms: platforms.map(toBackendPlatform),
+      });
+      if (photos.length) {
+        try {
+          await uploadProductImages(
+            product.id,
+            photos.map((p) => p.file)
+          );
+        } catch {
+          setSubmitMsg("상품은 저장됐지만 사진 업로드는 실패했어요(S3 권한 확인).");
+          return;
+        }
+      }
+      setSubmitMsg("등록되었어요 ✅");
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 401) {
+        setSubmitMsg("로그인이 필요해요. (백엔드 인증 연동 후 가능)");
+      } else if (e instanceof ApiError) {
+        setSubmitMsg(`등록 실패: ${e.message}`);
+      } else {
+        setSubmitMsg("등록 중 오류가 발생했어요. 백엔드 서버를 확인해주세요.");
+      }
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -223,15 +281,19 @@ export default function UploadPage() {
           </button>
           <button
             type="button"
-            className="rounded-lg border border-border px-5 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
+            onClick={submit}
+            disabled={submitting}
+            className="rounded-lg border border-border px-5 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-muted disabled:opacity-50"
           >
             임시저장
           </button>
           <button
             type="button"
-            className="rounded-lg bg-primary px-5 py-2 text-sm font-bold text-primary-foreground transition-colors hover:bg-primary/90"
+            onClick={submit}
+            disabled={submitting}
+            className="rounded-lg bg-primary px-5 py-2 text-sm font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
           >
-            업로드
+            {submitting ? "등록 중…" : "업로드"}
           </button>
         </div>
       </div>
@@ -544,6 +606,9 @@ export default function UploadPage() {
             네고 제안받기
           </label>
           <div className="flex items-center gap-4">
+            {submitMsg && (
+              <span className="text-sm font-medium text-foreground">{submitMsg}</span>
+            )}
             <span className="text-sm text-muted-foreground">
               정산 금액 <strong className="text-base font-bold text-foreground">{settlement.toLocaleString("ko-KR")}원</strong>
             </span>

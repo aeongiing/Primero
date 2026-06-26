@@ -1,10 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { use, useEffect, useState } from "react";
 import Link from "next/link";
+import { getProduct, type ProductOut } from "@/lib/api";
 
-// TODO(연동): 백엔드 GET /api/v1/products/{id} 로 교체. 현재는 레이아웃용 목 데이터.
-const MOCK = {
+interface Props {
+  params: Promise<{ id: string }>;
+}
+
+interface DetailData {
+  brand: string;
+  title: string;
+  price: number;
+  condition: number;
+  size: string | null;
+  chest: number | null;
+  total_length: number | null;
+  description: string;
+  category: string[];
+  listedAgo: string;
+  seller: { name: string };
+  images: number;
+}
+
+// 기본 목업 (백엔드 미가용/미인증 시 표시)
+const MOCK: DetailData = {
   brand: "Junya Watanabe",
   title: "06FW 준야와타나베 플란넬 M-65 필드 자켓 (on.767)",
   price: 585000,
@@ -20,15 +40,68 @@ const MOCK = {
   images: 4,
 };
 
+function relTime(iso: string): string {
+  if (!iso) return "";
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+  if (days <= 0) return "오늘";
+  if (days < 30) return `${days}일 전`;
+  return `${Math.floor(days / 30)}개월 전`;
+}
+
+function fromProduct(p: ProductOut): DetailData {
+  return {
+    brand: p.brand || "",
+    title: p.title,
+    price: p.price,
+    condition: p.condition,
+    size: p.size,
+    chest: p.chest,
+    total_length: p.total_length,
+    description: p.description,
+    category: p.category
+      ? p.category.split(">").map((s) => s.trim()).filter(Boolean)
+      : [],
+    listedAgo: relTime(p.created_at),
+    seller: { name: "판매자" },
+    images: p.images?.length || 1,
+  };
+}
+
 function Money({ value }: { value: number }) {
   return <span>₩ {value.toLocaleString("ko-KR")}</span>;
 }
 
-export default function ProductDetailPage() {
+export default function ProductDetailPage({ params }: Props) {
+  const { id } = use(params);
   const [index, setIndex] = useState(0);
+  const [data, setData] = useState<DetailData>(MOCK);
 
-  const prev = () => setIndex((i) => (i - 1 + MOCK.images) % MOCK.images);
-  const next = () => setIndex((i) => (i + 1) % MOCK.images);
+  // 실데이터 로드 — 미인증/오프라인 시 목업 유지
+  useEffect(() => {
+    let alive = true;
+    getProduct(id)
+      .then((p) => {
+        if (alive) {
+          setData(fromProduct(p));
+          setIndex(0);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [id]);
+
+  const prev = () => setIndex((i) => (i - 1 + data.images) % data.images);
+  const next = () => setIndex((i) => (i + 1) % data.images);
+
+  const sizeLine = [
+    data.size,
+    data.chest != null ? `가슴단면 ${data.chest}cm` : null,
+    data.total_length != null ? `총장 ${data.total_length}cm` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <main className="mx-auto max-w-[1280px] px-6 py-8">
@@ -37,7 +110,7 @@ export default function ProductDetailPage() {
         <div>
           <div className="relative aspect-square overflow-hidden rounded-lg bg-muted">
             <div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
-              이미지 {index + 1} / {MOCK.images}
+              이미지 {index + 1} / {data.images}
             </div>
             <button
               type="button"
@@ -60,9 +133,8 @@ export default function ProductDetailPage() {
               </svg>
             </button>
           </div>
-          {/* 썸네일 dot */}
           <div className="mt-3 flex justify-center gap-1.5">
-            {Array.from({ length: MOCK.images }).map((_, i) => (
+            {Array.from({ length: data.images }).map((_, i) => (
               <button
                 key={i}
                 type="button"
@@ -80,7 +152,7 @@ export default function ProductDetailPage() {
         <div className="flex flex-col gap-4">
           <div className="flex items-start justify-between gap-4">
             <Link href="#" className="text-base font-bold text-foreground underline underline-offset-2 hover:text-brand">
-              {MOCK.brand}
+              {data.brand || "브랜드 미상"}
             </Link>
             <button type="button" aria-label="공유" className="text-muted-foreground hover:text-foreground">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -92,31 +164,33 @@ export default function ProductDetailPage() {
             </button>
           </div>
 
-          <h1 className="text-xl font-bold leading-snug">{MOCK.title}</h1>
+          <h1 className="text-xl font-bold leading-snug">{data.title}</h1>
 
-          <p className="text-2xl font-bold"><Money value={MOCK.price} /></p>
+          <p className="text-2xl font-bold"><Money value={data.price} /></p>
 
           <dl className="grid grid-cols-[5rem_1fr] gap-y-2 text-sm">
             <dt className="text-muted-foreground">컨디션</dt>
-            <dd>{MOCK.condition}/10 (상태 좋음)</dd>
+            <dd>{data.condition}/10</dd>
             <dt className="text-muted-foreground">사이즈</dt>
-            <dd>{MOCK.size} · 가슴단면 {MOCK.chest}cm · 총장 {MOCK.total_length}cm</dd>
+            <dd>{sizeLine || "-"}</dd>
           </dl>
 
           <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
-            {MOCK.description}
+            {data.description}
           </p>
 
           <div className="flex items-center gap-2 text-sm">
-            {MOCK.category.map((c) => (
+            {data.category.map((c) => (
               <span key={c} className="rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground">
                 {c}
               </span>
             ))}
-            <span className="ml-auto text-muted-foreground">{MOCK.listedAgo}</span>
+            {data.listedAgo && (
+              <span className="ml-auto text-muted-foreground">{data.listedAgo}</span>
+            )}
           </div>
 
-          {/* 안전결제 안내 */}
+          {/* 멀티플랫폼 안내 */}
           <div className="flex items-center gap-2 rounded-lg bg-accent px-4 py-3 text-sm">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--brand)" strokeWidth="2">
               <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
@@ -130,7 +204,7 @@ export default function ProductDetailPage() {
             <h2 className="text-lg font-bold">판매자 정보</h2>
             <div className="mt-3 flex items-center gap-3 rounded-lg border p-3">
               <div className="h-11 w-11 shrink-0 rounded-full bg-muted" />
-              <p className="text-sm font-medium">{MOCK.seller.name}</p>
+              <p className="text-sm font-medium">{data.seller.name}</p>
             </div>
           </div>
         </div>
