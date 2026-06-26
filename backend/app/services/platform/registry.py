@@ -8,23 +8,23 @@ eBay 는 공식 API 기반이라 브라우저를 사용하지 않는다.
 from app.services.platform.base import PlatformAdapter
 from app.services.platform.browser import BrowserAutomation
 from app.services.platform.karrot import KarrotAdapter
-from app.services.platform.bunjang import BunjangAdapter
 from app.services.platform.fruits import FruitsAdapter
 from app.services.platform.charan import CharanAdapter
 from app.services.platform.junggonara import JunggonaraAdapter
 from app.services.platform.ebay import EbayAdapter
+from app.services.platform.bunjang_api import BunjangApiAdapter
 
 # 브라우저 자동화를 사용하는 어댑터.
 _BROWSER_ADAPTERS: dict[str, type[PlatformAdapter]] = {
     "karrot": KarrotAdapter,
-    "bunjang": BunjangAdapter,
     "fruits": FruitsAdapter,
     "charan": CharanAdapter,
     "junggonara": JunggonaraAdapter,
 }
 
-# 공식 API 기반(브라우저 불필요) 어댑터.
+# HTTP API 기반(브라우저 불필요) 어댑터.
 _API_ADAPTERS: dict[str, type[PlatformAdapter]] = {
+    "bunjang": BunjangApiAdapter,
     "ebay": EbayAdapter,
 }
 
