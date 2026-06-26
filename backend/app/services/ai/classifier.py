@@ -1,3 +1,4 @@
+from __future__ import annotations
 """[윤채린] 의류 분류 + 설명 생성 (Claude 멀티모달 통합).
 
 Anthropic API를 직접 호출해 카테고리·색상·소재·패턴·계절·스타일·제목·브랜드·설명을

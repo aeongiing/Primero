@@ -1,3 +1,4 @@
+from __future__ import annotations
 """[여원] 상품(표준_상품) CRUD 라우트.
 
 표준_상품(Canonical Product)은 파라파라의 유일한 원본(SSOT)이다. 이 라우트는
