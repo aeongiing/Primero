@@ -44,7 +44,7 @@ def _thumb_key(s3_key: str) -> str:
 def _process(image_bytes: bytes) -> bytes:
     # 1. 배경 제거 (rembg 있을 때만)
     if _HAS_REMBG:
-        fg_bytes = rembg_remove(image_bytes)
+        fg_bytes = rembg_remove(image_bytes, model="u2net_cloth_seg")
         fg = Image.open(io.BytesIO(fg_bytes)).convert("RGBA")
     else:
         fg = Image.open(io.BytesIO(image_bytes)).convert("RGBA")

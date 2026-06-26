@@ -23,6 +23,7 @@ from app.schemas.product import ProductCreate, ProductOut, ProductUpdate
 from app.schemas.ai import AIAnalysisResult
 from app.schemas.media import ImageUploadOut
 from app.services.media.s3 import upload, build_key, UploadValidationError, S3StorageError
+from app.services.media.thumbnail import make_thumbnail
 
 router = APIRouter(prefix="/products", tags=["products"])
 
@@ -124,7 +125,14 @@ async def upload_images(
         except S3StorageError as exc:
             raise HTTPException(status_code=502, detail=str(exc)) from exc
 
-        image = ProductImage(product_id=product.id, s3_key=key, order=order)
+        if order == 0:
+            try:
+                thumb_key = await make_thumbnail(key)
+                image = ProductImage(product_id=product.id, s3_key=thumb_key, order=order)
+            except Exception:
+                image = ProductImage(product_id=product.id, s3_key=key, order=order)
+        else:
+            image = ProductImage(product_id=product.id, s3_key=key, order=order)
         db.add(image)
         results.append(image)
 
