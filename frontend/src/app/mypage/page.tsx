@@ -59,7 +59,7 @@ export default function MyPage() {
                 <span className="text-sm font-medium">{p.label}</span>
                 {!p.available && (
                   <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
-                    준비 중
+                    지원 예정
                   </span>
                 )}
               </div>
