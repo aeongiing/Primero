@@ -1,0 +1,7 @@
+-r requirements.txt
+
+# 테스트 (작업 5~: 외부 의존 없이 라우트/도메인 검증)
+pytest==9.1.1
+pytest-asyncio==1.4.0
+aiosqlite==0.22.1          # 인메모리 테스트 DB
+hypothesis==6.155.7        # 속성 기반 테스트(PBT)
