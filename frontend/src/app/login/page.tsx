@@ -1,85 +1,98 @@
-import Link from "next/link";
+"use client";
 
-function GoogleIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
-      <path
-        fill="#4285F4"
-        d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62Z"
-      />
-      <path
-        fill="#34A853"
-        d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33A9 9 0 0 0 9 18Z"
-      />
-      <path
-        fill="#FBBC05"
-        d="M3.97 10.72a5.4 5.4 0 0 1 0-3.44V4.95H.96a9 9 0 0 0 0 8.1l3.01-2.33Z"
-      />
-      <path
-        fill="#EA4335"
-        d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58A9 9 0 0 0 .96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58Z"
-      />
-    </svg>
-  );
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { googleLogin, setToken } from "@/lib/api";
+
+const CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "";
+
+// Google Identity Services 전역
+interface GoogleIdConfig {
+  client_id: string;
+  callback: (resp: { credential: string }) => void;
+}
+interface GoogleButtonOptions {
+  theme?: string;
+  size?: string;
+  width?: number;
+  text?: string;
+  shape?: string;
+}
+interface GoogleAccountsId {
+  initialize: (config: GoogleIdConfig) => void;
+  renderButton: (el: HTMLElement, options: GoogleButtonOptions) => void;
+}
+declare global {
+  interface Window {
+    google?: { accounts: { id: GoogleAccountsId } };
+  }
 }
 
 export default function LoginPage() {
+  const router = useRouter();
+  const btnRef = useRef<HTMLDivElement>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!CLIENT_ID) {
+      setError("NEXT_PUBLIC_GOOGLE_CLIENT_ID 가 설정되지 않았어요. (.env.local 확인)");
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
+      const gid = window.google?.accounts.id;
+      if (!gid) return;
+      gid.initialize({
+        client_id: CLIENT_ID,
+        callback: async (resp) => {
+          try {
+            const { access_token } = await googleLogin(resp.credential);
+            setToken(access_token);
+            router.push("/");
+          } catch {
+            setError("로그인에 실패했어요. 잠시 후 다시 시도해주세요.");
+          }
+        },
+      });
+      if (btnRef.current) {
+        gid.renderButton(btnRef.current, {
+          theme: "outline",
+          size: "large",
+          width: 320,
+          text: "continue_with",
+          shape: "pill",
+        });
+      }
+    };
+    document.body.appendChild(script);
+    return () => {
+      script.remove();
+    };
+  }, [router]);
+
   return (
-    <main className="mx-auto w-full max-w-[400px] px-4 py-12">
-      <h1 className="text-center text-2xl font-bold">로그인</h1>
+    <main className="mx-auto flex w-full max-w-[400px] flex-col items-center px-4 py-16 text-center">
+      <h1 className="text-2xl font-bold">로그인</h1>
+      <p className="mt-2 text-sm text-muted-foreground">
+        Google 계정으로 시작하세요
+      </p>
 
-      {/* 이메일 / 비밀번호 폼 — 화면 구성 일치용. 실제 인증은 Google 단일.
-          (정책: Google OAuth만 지원 → 이 폼은 추후 제거 가능) */}
-      <form className="mt-10 flex flex-col gap-5">
-        <div className="flex flex-col gap-2">
-          <label htmlFor="email" className="text-sm font-medium">
-            이메일
-          </label>
-          <input
-            id="email"
-            type="email"
-            autoComplete="email"
-            className="h-12 rounded-md border border-input px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
-          />
-        </div>
+      {/* Google 로그인 버튼이 여기에 렌더링됨 */}
+      <div ref={btnRef} className="mt-8 flex min-h-[44px] justify-center" />
 
-        <div className="flex flex-col gap-2">
-          <label htmlFor="password" className="text-sm font-medium">
-            비밀번호
-          </label>
-          <input
-            id="password"
-            type="password"
-            autoComplete="current-password"
-            className="h-12 rounded-md border border-input px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
-          />
-        </div>
+      {error && <p className="mt-4 text-xs text-destructive">{error}</p>}
 
-        <button
-          type="submit"
-          className="h-12 rounded-md bg-primary text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
-        >
-          로그인
-        </button>
-
-        <Link
-          href="/login"
-          className="mx-auto text-xs text-muted-foreground underline underline-offset-2"
-        >
-          회원 가입
-        </Link>
-      </form>
-
-      {/* 소셜 로그인 — Google 단일 (Facebook/Kakao 미지원) */}
-      <div className="mt-6 flex flex-col gap-3">
-        <a
-          href="/api/v1/auth/google"
-          className="flex h-12 w-full items-center justify-center gap-2.5 rounded-full border border-border bg-white text-sm font-medium transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <GoogleIcon />
-          Google로 계속하기
-        </a>
-      </div>
+      <p className="mt-6 px-2 text-xs leading-relaxed text-muted-foreground">
+        로그인 시 ParaPara의{" "}
+        <Link href="/terms" className="underline underline-offset-2">이용약관</Link> 및{" "}
+        <Link href="/privacy" className="underline underline-offset-2">개인정보 처리방침</Link>
+        에 동의하게 됩니다.
+      </p>
     </main>
   );
 }

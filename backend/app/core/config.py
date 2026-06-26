@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 60 * 24 * 7  # 7일
 
+    # Google OAuth (id_token 검증용 — 프론트와 동일한 Client ID)
+    google_client_id: str = ""
+
     # 브라우저 자동화 (Playwright)
     browser_headless: bool = True
 
