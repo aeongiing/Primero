@@ -19,6 +19,7 @@ class AIAnalysisResult(BaseModel):
     title: str
     brand: str
     category: str
+    gender: str = "공용"  # 남성/여성/공용 — 중고나라 등 성별 구분 카테고리 매핑용
     description: str
     condition: int
     size: Optional[str]

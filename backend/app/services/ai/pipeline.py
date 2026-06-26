@@ -27,6 +27,14 @@ _CHARAN_TO_BUNJANG: Dict[str, str] = {
     "세트 > 트레이닝 세트": "셋업/세트 > 트레이닝/스웨트 셋업",
 }
 
+# ─── 성별 → 중고나라 카테고리 매핑 ───
+# 중고나라 웹 의류 카테고리는 단순하다(패션의류 > 여성/남성의류). 공용은 여성의류로 둔다.
+_GENDER_TO_JUNGGONARA: Dict[str, str] = {
+    "남성": "패션의류 > 남성의류",
+    "여성": "패션의류 > 여성의류",
+    "공용": "패션의류 > 여성의류",
+}
+
 _CHARAN_TO_EBAY: Dict[str, str] = {
     "아우터 > 코트": "Outerwear Coats & Jackets",
     "아우터 > 재킷": "Outerwear Coats & Jackets",
@@ -87,6 +95,21 @@ def _map_karrot(result: Dict) -> PlatformMapping:
     )
 
 
+def _map_junggonara(result: Dict) -> PlatformMapping:
+    gender = result.get("gender", "공용")
+    category = _GENDER_TO_JUNGGONARA.get(gender, "패션의류 > 여성의류")
+    desc = result["description"]
+    if result.get("materials"):
+        desc += f"\n\n소재: {', '.join(result['materials'])}"
+    # 중고나라는 컨디션 등급 칸이 없어 상품상태(중고/새상품)는 등록 단계에서 처리한다.
+    return PlatformMapping(
+        platform="junggonara",
+        category=category,
+        title=result["title"],
+        description=desc,
+    )
+
+
 def _map_ebay(result: Dict) -> PlatformMapping:
     category = _CHARAN_TO_EBAY.get(result["category"], "Other Men's Vintage Clothing")
     return PlatformMapping(
@@ -106,6 +129,7 @@ async def analyze(s3_keys: List[str]) -> AIAnalysisResult:
         _map_charan(result),
         _map_bunjang(result),
         _map_karrot(result),
+        _map_junggonara(result),
         _map_ebay(result),
     ]
 
@@ -113,6 +137,7 @@ async def analyze(s3_keys: List[str]) -> AIAnalysisResult:
         title=result.get("title", "중고 의류"),
         brand=result.get("brand", "미상"),
         category=result.get("category", "상의 > 티셔츠"),
+        gender=result.get("gender", "공용"),
         description=result.get("description", ""),
         condition=5,
         size=None,
