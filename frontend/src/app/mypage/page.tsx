@@ -1,7 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { clearToken } from "@/lib/api";
+import { clearToken, getToken, getMe, type MeOut } from "@/lib/api";
 
 const PLATFORMS = [
   { key: "bunjang",    label: "번개장터", color: "#FA2828", available: true },
@@ -12,6 +13,12 @@ const PLATFORMS = [
 
 export default function MyPage() {
   const router = useRouter();
+  const [me, setMe] = useState<MeOut | null>(null);
+
+  useEffect(() => {
+    if (!getToken()) return;
+    getMe().then(setMe).catch(() => {});
+  }, []);
 
   const handleLogout = () => {
     clearToken();
@@ -26,11 +33,15 @@ export default function MyPage() {
         <div className="mt-4 flex flex-col gap-2 text-sm">
           <div className="flex items-center gap-3">
             <span className="w-20 shrink-0 text-muted-foreground">이메일</span>
-            <span className="text-muted-foreground">—</span>
+            <span>{me?.email ?? "—"}</span>
           </div>
           <div className="flex items-center gap-3">
             <span className="w-20 shrink-0 text-muted-foreground">가입일</span>
-            <span className="text-muted-foreground">—</span>
+            <span>
+              {me?.created_at
+                ? new Date(me.created_at).toLocaleDateString("ko-KR")
+                : "—"}
+            </span>
           </div>
         </div>
         <button
