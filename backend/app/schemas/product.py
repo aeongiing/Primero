@@ -21,6 +21,8 @@ class ProductCreate(BaseModel):
     category: str
     condition: int = Field(ge=1, le=10)
     price: int = Field(gt=0)
+    colors: list[str] = []
+    materials: list[str] = []
     size: str | None = None
     chest: int | None = None
     total_length: int | None = None
@@ -47,6 +49,8 @@ class ProductOut(BaseModel):
     condition: int
     price: int
     status: ProductStatus
+    colors: list[str] = []
+    materials: list[str] = []
     size: str | None
     chest: int | None
     total_length: int | None

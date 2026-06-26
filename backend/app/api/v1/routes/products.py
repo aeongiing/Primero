@@ -65,6 +65,8 @@ async def create_product(
         category=body.category,
         condition=body.condition,
         price=body.price,
+        colors=body.colors,
+        materials=body.materials,
         size=body.size,
         chest=body.chest,
         total_length=body.total_length,

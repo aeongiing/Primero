@@ -20,6 +20,8 @@ def _valid_payload(**overrides) -> dict:
         "condition": 8,
         "price": 45000,
         "size": "L",
+        "colors": ["블랙", "차콜"],
+        "materials": ["면", "폴리에스터"],
         "platforms": ["karrot", "bunjang"],
     }
     body.update(overrides)
@@ -36,6 +38,8 @@ async def test_create_product_persists_and_returns_draft(client: AsyncClient, us
     assert data["status"] == "draft"
     assert data["user_id"] == str(user.id)
     assert data["images"] == []
+    assert data["colors"] == ["블랙", "차콜"]
+    assert data["materials"] == ["면", "폴리에스터"]
     # 생성 응답은 유효한 UUID 를 가진다
     uuid.UUID(data["id"])
 
@@ -98,3 +102,14 @@ async def test_get_missing_product_returns_404(client: AsyncClient):
 async def test_create_rejects_invalid_values(client: AsyncClient, bad: dict):
     resp = await client.post("/api/v1/products", json=_valid_payload(**bad))
     assert resp.status_code == 422
+
+
+async def test_colors_materials_default_to_empty_lists(client: AsyncClient):
+    payload = _valid_payload()
+    del payload["colors"]
+    del payload["materials"]
+
+    resp = await client.post("/api/v1/products", json=payload)
+    assert resp.status_code == 201
+    assert resp.json()["colors"] == []
+    assert resp.json()["materials"] == []

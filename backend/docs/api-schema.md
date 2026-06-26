@@ -114,6 +114,8 @@
   "condition": 8,
   "price": 45000,
   "size": "L",
+  "colors": ["블랙", "차콜"],
+  "materials": ["면", "폴리에스터"],
   "chest": null,
   "total_length": null,
   "waist": null,
@@ -123,6 +125,8 @@
 }
 ```
 검증: `condition` 1~10, `price` > 0. `platforms` 는 발행 대상(작업 7에서 사용).
+`colors`/`materials` 는 정규값(차란 기준) 리스트. 생략 시 빈 배열. 플랫폼별 개수
+제약(예: 차란 소재 최대 4)은 저장 시점이 아니라 매핑 엔진(작업 7)에서 절단한다.
 
 응답 `201` `ProductOut` (아래 4.1).
 
@@ -162,6 +166,8 @@
   "price": 45000,
   "status": "draft",
   "size": "L | null",
+  "colors": ["블랙", "차콜"],
+  "materials": ["면", "폴리에스터"],
   "chest": null,
   "total_length": null,
   "waist": null,
@@ -232,5 +238,5 @@
 
 1. **오류 응답 형식**: FastAPI 기본 `{"detail"}` vs steering 공통 `{"error_code", "message", "details"}`.
 2. **platform-accounts 스키마 통일**: 인라인 모델 → `schemas/platform.py`, `id` 타입(`uuid`) 정합.
-3. **analyze 응답 ↔ ProductCreate 매핑**: `AIAnalysisResult` 에는 `colors`/`material` 이 있으나 `ProductCreate`/`Product` 모델엔 없음. 색상·소재 저장 여부와 위치(별도 필드 or 설명 본문) 결정.
+3. **analyze 응답 ↔ ProductCreate 매핑**: 표준_상품에 `colors: list[str]` / `materials: list[str]` 추가 완료. 단 `AIAnalysisResult.material` 은 아직 단일 `str` → 윤채린 쪽에서 `materials: list[str]` 로 맞추면 정합. 계절·패턴·스타일(차란)은 매핑 엔진 구현 시 추가 예정.
 4. **목록 응답에 리스팅 상태 포함 여부**: 프론트 대시보드에서 상태 배지가 필요하면 `ProductOut` 에 요약 추가 검토.

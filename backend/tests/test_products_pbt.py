@@ -35,6 +35,8 @@ product_payloads = st.fixed_dictionaries(
         "condition": st.integers(min_value=1, max_value=10),
         "price": st.integers(min_value=1, max_value=100_000_000),
         "size": st.one_of(st.none(), st.text(max_size=20)),
+        "colors": st.lists(_safe_text, max_size=5),
+        "materials": st.lists(_safe_text, max_size=6),
         "platforms": st.lists(
             st.sampled_from(["karrot", "bunjang", "fruits", "charan"]),
             max_size=4,
@@ -80,6 +82,8 @@ async def _round_trip(payload: dict) -> None:
                 for field in ("title", "brand", "description", "category", "condition", "price"):
                     assert data[field] == payload[field]
                 assert data["size"] == payload["size"]
+                assert data["colors"] == payload["colors"]
+                assert data["materials"] == payload["materials"]
                 # 신규 상품은 항상 draft, 소유자 일치
                 assert data["status"] == "draft"
                 assert data["user_id"] == str(owner.id)
