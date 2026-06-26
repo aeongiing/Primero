@@ -10,6 +10,7 @@ import os
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
 import uuid
+from unittest.mock import AsyncMock, patch
 
 import pytest_asyncio
 from httpx import AsyncClient, ASGITransport
@@ -67,8 +68,14 @@ async def client(db_session: AsyncSession, user: User):
     app.dependency_overrides[get_db] = _override_db
     app.dependency_overrides[get_current_user_id] = _override_user
 
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        yield ac
+    # 발행(Playwright 브라우저)을 모킹해 테스트에서 실제 사이트 접속 안 함.
+    with patch(
+        "app.services.automation.listing_service.publish_to_platforms",
+        new_callable=AsyncMock,
+        return_value=[],
+    ):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            yield ac
 
     app.dependency_overrides.clear()

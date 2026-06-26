@@ -45,8 +45,10 @@ class Product(Base):
         back_populates="product",
         order_by="ProductImage.order",
         cascade="all, delete-orphan",
+        lazy="selectin",
     )
     listings: Mapped[List["Listing"]] = relationship(
         back_populates="product",
         cascade="all, delete-orphan",
+        lazy="selectin",
     )
