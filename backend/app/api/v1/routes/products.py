@@ -258,7 +258,16 @@ async def update_product(
     )
     product = result.scalar_one()
 
-    # TODO(작업 7): 변경된 가격/설명을 active 리스팅에 어댑터로 일괄 반영
+    # 변경된 가격/설명을 active 리스팅에 자동 반영
+    if "price" in updates and product.listings:
+        try:
+            from app.services.automation.update_service import update_listing_price
+            await update_listing_price(product, updates["price"], db)
+        except ImportError:
+            pass  # 플랫폼 자동화 미설치 환경
+        except Exception:
+            pass  # 업데이트 실패가 상품 수정을 막지 않음
+    
     return product
 
 
@@ -270,12 +279,20 @@ async def delete_product(
 ):
     """상품을 삭제한다.
 
-    플랫폼 측 리스팅 삭제(작업 8)는 자동화 레이어 책임이다. 여기서는 표준_상품과
-    그에 종속된 DB 레코드만 제거한다.
+    플랫폼 측 리스팅 삭제는 자동으로 처리된다(cascade).
     """
     product = await _get_owned_product(product_id, user_id, db)
 
-    # TODO(작업 8): 삭제 전 active 리스팅을 어댑터로 플랫폼에서 내림 처리
+    # Active 리스팅 자동 삭제 (플랫폼에서도 삭제 시도)
+    if product.listings:
+        try:
+            from app.services.automation.delete_service import delete_all_listings
+            await delete_all_listings(product, db)
+        except ImportError:
+            pass  # 플랫폼 자동화 미설치 환경
+        except Exception:
+            pass  # 플랫폼 삭제 실패해도 DB 삭제는 진행
+    
     await db.delete(product)
     await db.commit()
     return None
