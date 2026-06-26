@@ -27,6 +27,9 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -49,38 +52,48 @@
 }
 
 :root {
+  /* Primero 디자인 시스템 — fruits 구조 / Pantone Mocha Mousse(#A47864) 계열 */
+  --font-sans: Pretendard, -apple-system, BlinkMacSystemFont,
+    "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+
   --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  --foreground: oklch(0.145 0.006 55);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.145 0.006 55);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --popover-foreground: oklch(0.145 0.006 55);
+  /* 1차 버튼/CTA = Pantone 17-1230 Mocha Mousse #A47864 (그대로 노출) */
+  --primary: #a47864;
+  --primary-foreground: oklch(0.99 0.01 60);
+  --secondary: oklch(0.97 0.008 55);
+  --secondary-foreground: oklch(0.4 0.05 47);
+  --muted: oklch(0.97 0.008 55);
+  --muted-foreground: oklch(0.49 0.015 55);
+  /* 연한 모카 크림 강조 배경 */
+  --accent: oklch(0.95 0.022 58);
+  --accent-foreground: oklch(0.4 0.05 47);
+  /* 포인트 = Mocha Mousse (primary와 동일) */
+  --brand: #a47864;
+  --brand-foreground: oklch(0.99 0.01 60);
+  --success: oklch(0.6 0.12 175);
+  --destructive: oklch(0.58 0.245 27.325);
+  --border: oklch(0.92 0.006 55);
+  --input: oklch(0.92 0.006 55);
+  --ring: #a47864;
+  --chart-1: #a47864;
+  --chart-2: oklch(0.7 0.05 50);
+  --chart-3: oklch(0.8 0.035 55);
+  --chart-4: oklch(0.45 0.05 45);
+  --chart-5: oklch(0.3 0.04 45);
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar: oklch(0.985 0.005 55);
+  --sidebar-foreground: oklch(0.18 0.005 60);
+  --sidebar-primary: oklch(0.43 0.055 47);
+  --sidebar-primary-foreground: oklch(0.99 0.01 60);
+  --sidebar-accent: oklch(0.95 0.022 58);
+  --sidebar-accent-foreground: oklch(0.43 0.055 47);
+  --sidebar-border: oklch(0.92 0.006 55);
+  --sidebar-ring: oklch(0.611 0.062 47);
 }
 
 .dark {
@@ -126,5 +139,6 @@
   }
   html {
     @apply font-sans;
+    font-size: 17.5px;
   }
 }

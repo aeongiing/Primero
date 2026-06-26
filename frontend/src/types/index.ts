@@ -1,4 +1,4 @@
-export type Platform = "karrot" | "bunjang" | "fruits" | "charan" | "ebay";
+export type Platform = "bunjang" | "joonggonara" | "fruits" | "ebay" | "charan" | "karrot";
 
 export type ProductStatus = "draft" | "listing" | "listed" | "sold" | "unlisted";
 
