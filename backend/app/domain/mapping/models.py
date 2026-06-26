@@ -4,7 +4,10 @@
 스키마를 이 값 객체로 변환해 엔진에 전달한다.
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field
+from typing import Dict, List, Optional, Tuple
 
 
 @dataclass(frozen=True)
@@ -20,12 +23,12 @@ class CanonicalProduct:
     category: str
     condition: float
     price: int
-    size: str | None = None
-    colors: tuple[str, ...] = ()
-    materials: tuple[str, ...] = ()
-    seasons: tuple[str, ...] = ()
-    patterns: tuple[str, ...] = ()
-    styles: tuple[str, ...] = ()
+    size: Optional[str] = None
+    colors: Tuple[str, ...] = ()
+    materials: Tuple[str, ...] = ()
+    seasons: Tuple[str, ...] = ()
+    patterns: Tuple[str, ...] = ()
+    styles: Tuple[str, ...] = ()
 
 
 @dataclass
@@ -38,9 +41,9 @@ class MappingResult:
     - missing_required: 매핑 후에도 비어 있는 필수 필드. 비어 있지 않으면 등록 보류.
     """
     platform: str
-    payload: dict = field(default_factory=dict)
-    unmapped_fields: dict[str, list[str]] = field(default_factory=dict)
-    missing_required: list[str] = field(default_factory=list)
+    payload: Dict = field(default_factory=dict)
+    unmapped_fields: Dict[str, List[str]] = field(default_factory=dict)
+    missing_required: List[str] = field(default_factory=list)
 
     @property
     def ok(self) -> bool:

@@ -1,3 +1,4 @@
+from __future__ import annotations
 """[여원] 매핑 엔진 (순수 함수).
 
 표준_상품 → 플랫폼 페이로드 변환. 외부 의존 없음. 규칙은 config.py 의 선언적

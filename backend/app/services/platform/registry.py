@@ -1,3 +1,4 @@
+from __future__ import annotations
 """[여원] platform 문자열 → 어댑터 매핑.
 
 `get_adapter("karrot", browser)` 형태로 브라우저를 주입해 어댑터를 생성한다.

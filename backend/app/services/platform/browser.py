@@ -1,3 +1,4 @@
+from __future__ import annotations
 """[여원] 브라우저 자동화 포트 + Playwright 구현.
 
 공식 API 가 없는 플랫폼(당근/번개/Fruits/차란)은 실제 브라우저를 자동 조작해

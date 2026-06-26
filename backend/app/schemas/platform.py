@@ -1,3 +1,4 @@
+from __future__ import annotations
 """[여원] 플랫폼 등록 관련 스키마."""
 
 import uuid

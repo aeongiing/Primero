@@ -1,3 +1,4 @@
+from __future__ import annotations
 """플랫폼 메타데이터 응답 스키마 (Swagger 문서화용)."""
 
 from pydantic import BaseModel, Field

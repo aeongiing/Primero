@@ -1,3 +1,4 @@
+from __future__ import annotations
 """[여원] 플랫폼 어댑터 인터페이스 + 폼 기반 공통 구현.
 
 각 플랫폼은 등록/조회/삭제 3개 동작을 표준화한 PlatformAdapter 를 구현한다.
