@@ -56,9 +56,6 @@ export default function SiteHeader() {
             <Link href="/login" className="hover:text-brand transition-colors">
               로그인
             </Link>
-            <Link href="/signup" className="hover:text-brand transition-colors">
-              회원가입
-            </Link>
           </nav>
         </div>
       </div>
