@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     # Anthropic (직접 호출)
     anthropic_api_key: str = ""
     anthropic_model: str = "claude-sonnet-4-20250514"
+    anthropic_base_url: str = ""  # 게이트웨이/프록시 사용 시. 비우면 기본 endpoint.
 
     # OpenClaw
     openclaw_api_url: str = ""

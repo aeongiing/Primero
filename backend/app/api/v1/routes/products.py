@@ -48,27 +48,24 @@ async def _get_owned_product(
 @router.post("/analyze", response_model=AIAnalysisResult)
 async def analyze_images(
     images: List[UploadFile] = File(...),
-    user_id: uuid.UUID = Depends(get_current_user_id),
 ):
-    """사진을 S3에 임시 업로드 후 AI 분석 → 플랫폼별 매핑 결과를 반환한다."""
-    from app.services.ai.pipeline import analyze
+    """사진을 S3 없이 바로 Claude로 분석 → 플랫폼별 매핑 결과를 반환한다.
 
-    # 임시 키로 S3에 업로드
-    s3_keys: List[str] = []
-    temp_product_id = uuid.uuid4()
-    for idx, file in enumerate(images):
-        key = build_key(user_id, temp_product_id, idx)
-        try:
-            await upload(file, key)
-        except UploadValidationError as exc:
-            raise HTTPException(status_code=422, detail=str(exc)) from exc
-        except S3StorageError as exc:
-            raise HTTPException(status_code=502, detail=str(exc)) from exc
-        s3_keys.append(key)
+    인증 불필요(상품 저장 전 단계). 이미지는 저장하지 않고 바이트로만 분석한다.
+    """
+    from app.services.ai.pipeline import analyze_from_bytes
 
-    # AI 분석 파이프라인 실행
-    result = await analyze(s3_keys)
-    return result
+    payloads: List[tuple[bytes, str]] = []
+    for file in images[:6]:
+        data = await file.read()
+        if not data:
+            continue
+        payloads.append((data, file.content_type or "image/jpeg"))
+
+    if not payloads:
+        raise HTTPException(status_code=422, detail="분석할 이미지가 없습니다.")
+
+    return await analyze_from_bytes(payloads)
 
 
 @router.post("/{product_id}/images", response_model=list[ImageUploadOut], status_code=201)

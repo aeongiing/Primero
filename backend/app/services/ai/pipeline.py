@@ -3,10 +3,10 @@
 Claude 멀티모달 단일 호출 → 플랫폼별 매핑을 수행한다.
 """
 
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 from app.schemas.ai import AIAnalysisResult, PlatformMapping
-from app.services.ai.classifier import analyze_with_claude
+from app.services.ai.classifier import analyze_with_claude, analyze_with_claude_bytes
 
 # ─── 차란 → 번개장터 카테고리 매핑 ───
 
@@ -122,9 +122,19 @@ def _map_ebay(result: Dict) -> PlatformMapping:
 
 
 async def analyze(s3_keys: List[str]) -> AIAnalysisResult:
-    """이미지 → Claude 분석 → 플랫폼별 매핑 결과를 반환한다."""
+    """S3 이미지 → Claude 분석 → 플랫폼별 매핑 결과를 반환한다."""
     result = await analyze_with_claude(s3_keys)
+    return _build_result(result)
 
+
+async def analyze_from_bytes(payloads: List[Tuple[bytes, str]]) -> AIAnalysisResult:
+    """업로드된 이미지 바이트(S3 없이) → Claude 분석 → 매핑 결과."""
+    result = await analyze_with_claude_bytes(payloads)
+    return _build_result(result)
+
+
+def _build_result(result: Dict) -> AIAnalysisResult:
+    """Claude 분석 dict → AIAnalysisResult(+플랫폼 매핑)."""
     mappings = [
         _map_charan(result),
         _map_bunjang(result),
@@ -134,9 +144,9 @@ async def analyze(s3_keys: List[str]) -> AIAnalysisResult:
     ]
 
     return AIAnalysisResult(
-        title=result.get("title", "중고 의류"),
-        brand=result.get("brand", "미상"),
-        category=result.get("category", "상의 > 티셔츠"),
+        title=result.get("title", ""),
+        brand=result.get("brand", ""),
+        category=result.get("category", ""),
         gender=result.get("gender", "공용"),
         description=result.get("description", ""),
         condition=5,
@@ -146,10 +156,10 @@ async def analyze(s3_keys: List[str]) -> AIAnalysisResult:
         waist=None,
         hip=None,
         rise=None,
-        colors=result.get("colors", ["블랙"]),
+        colors=result.get("colors", []),
         material=result.get("materials", []),
-        pattern=result.get("pattern", "무지"),
-        style=result.get("style", ["베이직"]),
-        season=result.get("season", ["봄", "가을"]),
+        pattern=result.get("pattern", ""),
+        style=result.get("style", []),
+        season=result.get("season", []),
         platform_mappings=mappings,
     )

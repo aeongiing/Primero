@@ -8,7 +8,7 @@ import asyncio
 import base64
 import json
 from functools import lru_cache
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 import boto3
 
@@ -36,7 +36,7 @@ _SYSTEM_PROMPT = """\
 
 {
   "title": "상품 제목 (30자 이내, 브랜드+아이템+특징)",
-  "brand": "브랜드명 (태그에서 확인 불가하면 \\"미상\\")",
+  "brand": "브랜드명 (태그/로고에서 확인 가능할 때만. 불확실하면 빈 문자열 \\"\\")",
   "description": "상세 설명 (200자 내외, 소재감·핏·상태·코디 제안 포함)",
   "category": "카테고리 (아래 목록에서 선택)",
   "gender": "성별 (남성/여성/공용 중 하나)",
@@ -66,32 +66,42 @@ _SYSTEM_PROMPT = """\
 스타일 목록: 스포티, 스트릿, 베이직, 러블리, 오피스, 캠퍼스, 청순, 섹시"""
 
 
-def _build_content(s3_keys: List[str]) -> list:
+def _build_content_from_payloads(payloads: List[Tuple[bytes, str]]) -> list:
+    """(이미지 바이트, media_type) 목록 → Claude content 블록."""
     content = []
-    for key in s3_keys[:4]:
-        img_bytes = _get_image_bytes(key)
+    for data, media in payloads[:6]:
         content.append({
             "type": "image",
             "source": {
                 "type": "base64",
-                "media_type": "image/jpeg",
-                "data": base64.b64encode(img_bytes).decode(),
+                "media_type": media or "image/jpeg",
+                "data": base64.b64encode(data).decode(),
             },
         })
     content.append({"type": "text", "text": "이 의류를 분석해주세요."})
     return content
 
 
-def _invoke(s3_keys: List[str]) -> Dict:
+def _build_content(s3_keys: List[str]) -> list:
+    """S3 key 목록 → 바이트 로드 → content 블록."""
+    return _build_content_from_payloads(
+        [(_get_image_bytes(key), "image/jpeg") for key in s3_keys[:6]]
+    )
+
+
+def _invoke_content(content: list) -> Dict:
     import anthropic
 
-    client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+    client = anthropic.Anthropic(
+        api_key=settings.anthropic_api_key,
+        base_url=settings.anthropic_base_url or None,
+    )
 
     message = client.messages.create(
         model=settings.anthropic_model,
         max_tokens=800,
         system=_SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": _build_content(s3_keys)}],
+        messages=[{"role": "user", "content": content}],
     )
 
     text = message.content[0].text
@@ -100,6 +110,19 @@ def _invoke(s3_keys: List[str]) -> Dict:
     return json.loads(text[start:end])
 
 
+def _invoke(s3_keys: List[str]) -> Dict:
+    return _invoke_content(_build_content(s3_keys))
+
+
+def _invoke_bytes(payloads: List[Tuple[bytes, str]]) -> Dict:
+    return _invoke_content(_build_content_from_payloads(payloads))
+
+
 async def analyze_with_claude(s3_keys: List[str]) -> Dict:
-    """이미지를 Claude에 전송해 분류+설명을 한 번에 반환한다."""
+    """S3 이미지를 Claude에 전송해 분류+설명을 반환한다."""
     return await asyncio.to_thread(_invoke, s3_keys)
+
+
+async def analyze_with_claude_bytes(payloads: List[Tuple[bytes, str]]) -> Dict:
+    """업로드된 이미지 바이트를 (S3 없이) 바로 Claude에 전송해 분석한다."""
+    return await asyncio.to_thread(_invoke_bytes, payloads)
