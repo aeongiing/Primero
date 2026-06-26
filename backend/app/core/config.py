@@ -19,6 +19,16 @@ class Settings(BaseSettings):
     # 브라우저 자동화 (Playwright)
     browser_headless: bool = True
 
+    # Bedrock
+    bedrock_model_id: str = "anthropic.claude-sonnet-4-20250514"
+
+    # Anthropic (직접 호출)
+    anthropic_api_key: str = ""
+    anthropic_model: str = "claude-sonnet-4-20250514"
+
+    # OpenClaw
+    openclaw_api_url: str = ""
+
     class Config:
         env_file = ".env"
 

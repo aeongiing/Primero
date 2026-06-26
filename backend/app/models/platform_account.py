@@ -1,4 +1,5 @@
 import uuid
+from typing import List
 
 from sqlalchemy import String, Boolean, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -16,4 +17,4 @@ class PlatformAccount(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
     user: Mapped["User"] = relationship(back_populates="platform_accounts")
-    listings: Mapped[list["Listing"]] = relationship(back_populates="platform_account")
+    listings: Mapped[List["Listing"]] = relationship(back_populates="platform_account")

@@ -7,6 +7,8 @@ boto3 는 동기 클라이언트이므로, 비동기 핸들러에서 이벤트 �
 않도록 blocking I/O 는 asyncio.to_thread 로 감싼다.
 """
 
+from __future__ import annotations
+
 import asyncio
 import uuid
 from functools import lru_cache

@@ -1,21 +1,5 @@
-"""[윤채린] 상품 설명 자동 생성.
+"""[윤채린] 상품 설명 생성 — classifier.py에 통합됨.
 
-AWS Bedrock(Claude)를 사용해 분류 결과·치수·상태를 바탕으로
-판매용 상품 제목과 설명을 생성한다.
+Claude 멀티모달 단일 호출로 분류+설명을 동시에 처리하므로
+이 모듈은 하위 호환용으로만 유지한다.
 """
-
-
-async def generate(attrs: dict) -> dict:
-    """분류 속성을 받아 제목/브랜드/설명을 생성한다.
-
-    Args:
-        attrs: {"category", "colors", "material", "condition", ...}
-
-    Returns:
-        {"title": str, "brand": str, "description": str}
-
-    TODO:
-      - Bedrock Claude 프롬프트 구성
-      - 응답 파싱 → 제목/설명 분리
-    """
-    raise NotImplementedError

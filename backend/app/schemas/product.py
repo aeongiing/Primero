@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -21,22 +22,22 @@ class ProductCreate(BaseModel):
     category: str
     condition: int = Field(ge=1, le=10)
     price: int = Field(gt=0)
-    colors: list[str] = []
-    materials: list[str] = []
-    size: str | None = None
-    chest: int | None = None
-    total_length: int | None = None
-    waist: int | None = None
-    hip: int | None = None
-    rise: int | None = None
-    platforms: list[str]  # 등록할 플랫폼 목록
+    colors: List[str] = []
+    materials: List[str] = []
+    size: Optional[str] = None
+    chest: Optional[int] = None
+    total_length: Optional[int] = None
+    waist: Optional[int] = None
+    hip: Optional[int] = None
+    rise: Optional[int] = None
+    platforms: List[str]  # 등록할 플랫폼 목록
 
 
 class ProductUpdate(BaseModel):
-    title: str | None = None
-    description: str | None = None
-    price: int | None = Field(default=None, gt=0)
-    condition: int | None = Field(default=None, ge=1, le=10)
+    title: Optional[str] = None
+    description: Optional[str] = None
+    price: Optional[int] = Field(default=None, gt=0)
+    condition: Optional[int] = Field(default=None, ge=1, le=10)
 
 
 class ProductOut(BaseModel):
@@ -49,15 +50,15 @@ class ProductOut(BaseModel):
     condition: int
     price: int
     status: ProductStatus
-    colors: list[str] = []
-    materials: list[str] = []
-    size: str | None
-    chest: int | None
-    total_length: int | None
-    waist: int | None
-    hip: int | None
-    rise: int | None
+    colors: List[str] = []
+    materials: List[str] = []
+    size: Optional[str]
+    chest: Optional[int]
+    total_length: Optional[int]
+    waist: Optional[int]
+    hip: Optional[int]
+    rise: Optional[int]
     created_at: datetime
-    images: list[ProductImageOut] = []
+    images: List[ProductImageOut] = []
 
     model_config = {"from_attributes": True}
