@@ -8,7 +8,7 @@ import pytest
 
 from app.services.platform.base import FormPlatformAdapter, ListingPayload, PlatformError
 from app.services.platform.browser import Credentials
-from app.services.platform.forms import FieldKind, FormField, LoginSpec, PlatformFormSpec
+from app.services.platform.forms import FieldKind, FormField, LoginSpec, PlatformFormSpec, PopupSelect
 from tests.platform.fakes import FakeBrowser, FakePage
 
 _SPEC = PlatformFormSpec(
@@ -177,12 +177,12 @@ async def test_session_based_skips_form_login():
 
 
 async def test_category_navigates_by_text_path():
-    # 카테고리 opener 클릭 후 'A > B' 경로를 글자로 찾아 단계별 클릭한다.
+    # 카테고리 컨테이너 안에서 'A > B' 경로를 정확한 텍스트로 단계별 클릭한다.
     cat_spec = PlatformFormSpec(
         **{
             **_SPEC.__dict__,
             "fields": (FormField("title", "#title"),),
-            "category_opener": 'button:has-text("카테고리")',
+            "category_container": "#scroll-categoryId",
         }
     )
 
@@ -192,9 +192,42 @@ async def test_category_navigates_by_text_path():
     page = FakePage(texts={"#result-id": "X"})
     adapter = _CatAdapter(FakeBrowser(page))
 
-    payload = ListingPayload(fields={"title": "자켓", "category": "아우터 > 자켓"})
+    payload = ListingPayload(fields={"title": "자켓", "category": "여성의류 > 상의 > 니트/스웨터"})
     await adapter.create_listing(_creds(), payload)
 
-    assert ("click", 'button:has-text("카테고리")') in page.records
-    assert ("click", "text=아우터") in page.records
-    assert ("click", "text=자켓") in page.records
+    assert ("click", '#scroll-categoryId li:has-text("여성의류")') in page.records
+    assert ("click", '#scroll-categoryId li:has-text("상의")') in page.records
+    assert ("click", '#scroll-categoryId li:has-text("니트/스웨터")') in page.records
+
+
+async def test_category_skipped_when_no_container():
+    # container/opener 가 없으면(수동 선택) 카테고리 클릭을 하지 않는다.
+    page = FakePage(texts={"#result-id": "X"})
+    adapter = _TestAdapter(FakeBrowser(page))  # _SPEC 에는 category_container 없음
+    await adapter.create_listing(_creds(), _payload())
+    assert not any(r[0] == "click" and "categoryId" in str(r) for r in page.records)
+
+
+async def test_popup_select_opens_and_picks_option():
+    # 버튼→드롭다운 단일 선택: 트리거 클릭 후 스코프 내 옵션을 텍스트로 클릭.
+    ps_spec = PlatformFormSpec(
+        **{
+            **_SPEC.__dict__,
+            "fields": (FormField("title", "#title"),),
+            "popup_selects": (
+                PopupSelect("condition", "#scroll-condition button", "#scroll-condition"),
+            ),
+        }
+    )
+
+    class _PopupAdapter(FormPlatformAdapter):
+        spec = ps_spec
+
+    page = FakePage(texts={"#result-id": "X"})
+    adapter = _PopupAdapter(FakeBrowser(page))
+
+    payload = ListingPayload(fields={"title": "자켓", "condition": "사용감 없음"})
+    await adapter.create_listing(_creds(), payload)
+
+    assert ("click", "#scroll-condition button") in page.records
+    assert ("click", '#scroll-condition li:has-text("사용감 없음")') in page.records

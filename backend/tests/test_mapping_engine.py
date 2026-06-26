@@ -3,6 +3,7 @@
 import pytest
 
 from app.domain.mapping import CanonicalProduct, condition_to_grade, map_product
+from app.domain.mapping.grades import condition_to_bunjang
 
 
 def _product(**overrides) -> CanonicalProduct:
@@ -108,4 +109,19 @@ def test_junggonara_used_condition_and_defaults():
 def test_junggonara_new_condition_for_high_score():
     result = map_product(_product(condition=9.5), "junggonara")
     assert result.payload["condition"] == "새상품"
+
+
+@pytest.mark.parametrize(
+    "score,expected",
+    [
+        (10.0, "새 상품 (미사용)"),
+        (9.0, "새 상품 (미사용)"),
+        (8.0, "사용감 없음"),
+        (6.5, "사용감 적음"),
+        (4.0, "사용감 많음"),
+        (1.0, "고장/파손 상품"),
+    ],
+)
+def test_condition_to_bunjang(score: float, expected: str):
+    assert condition_to_bunjang(score) == expected
 

@@ -33,6 +33,7 @@ _SAMPLE = {
         "title": "[테스트] 삭제예정 상품 무시해주세요",
         "price": "99000000",
         "description": "자동화 테스트 등록입니다. 판매하지 않으며 곧 삭제합니다.",
+        "condition": "사용감 없음",
     },
     "junggonara": {
         "category": "패션의류 > 여성의류",
@@ -75,12 +76,14 @@ def run(name: str) -> None:
         page.goto(spec.new_listing_url, wait_until="domcontentloaded")
         page.wait_for_timeout(3000)
 
-        # 1) 카테고리
-        if spec.category_opener and data.get("category"):
+        # 1) 카테고리 (컨테이너 스코프 + 정확한 텍스트로 단계 클릭)
+        if spec.category_container and data.get("category"):
             try:
-                page.click(spec.category_opener, timeout=5000)
+                if spec.category_opener:
+                    page.click(spec.category_opener, timeout=5000)
                 for seg in data["category"].split(">"):
-                    page.click(f"text={seg.strip()}", timeout=5000)
+                    seg = seg.strip()
+                    page.click(f'{spec.category_container} li:has-text("{seg}")', timeout=7000)
                 print(f"  카테고리 클릭: {data['category']}")
             except Exception as exc:
                 print(f"  [경고] 카테고리 단계 실패(수동 선택 필요): {exc}")

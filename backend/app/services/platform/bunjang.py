@@ -18,7 +18,9 @@
 """
 
 from app.services.platform.base import FormPlatformAdapter
-from app.services.platform.forms import FieldKind, FormField, LoginSpec, PlatformFormSpec
+from app.services.platform.forms import (
+    FieldKind, FormField, LoginSpec, PlatformFormSpec, PopupSelect,
+)
 
 
 class BunjangAdapter(FormPlatformAdapter):
@@ -40,9 +42,15 @@ class BunjangAdapter(FormPlatformAdapter):
         ),
         image_field=FormField("images", "#media-input", FieldKind.files),
         submit_selector='button[type="submit"]',
-        # ⚠️ 카테고리 자동 클릭은 헤더 메뉴와 텍스트가 겹쳐 오작동(상품목록으로 이동) →
-        #    스코프된 셀렉터 확보 전까지 비활성. 카테고리는 수동 선택.
-        category_opener="",
+        # 카테고리: 폼 내 #scroll-categoryId 영역의 li 항목을 정확한 텍스트로 단계 클릭.
+        # 헤더 메뉴(여성의류 등)와 텍스트가 겹쳐도 컨테이너 스코프로 충돌을 피한다.
+        category_container="#scroll-categoryId",
+        # 상품상태: 버튼 누르면 뜨는 드롭다운에서 선택(번개 5단계).
+        #   새 상품 (미사용) / 사용감 없음 / 사용감 적음 / 사용감 많음 / 고장/파손 상품
+        # 사이즈는 카테고리 선택 후에야 나타나 의존성이 있어 추후 처리.
+        popup_selects=(
+            PopupSelect("condition", "#scroll-condition button", "#scroll-condition"),
+        ),
         listing_id_selector="",    # TODO: 등록 후 결과 화면 캡처 후 채움
         listing_id_attribute=None,
         listing_url_template="",

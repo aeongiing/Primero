@@ -35,3 +35,21 @@ _NEW_CONDITION_THRESHOLD = 9.0
 def condition_to_new_used(score: float) -> str:
     """0~10 컨디션 점수를 중고나라 상품상태(중고/새상품)로 변환한다."""
     return "새상품" if score >= _NEW_CONDITION_THRESHOLD else "중고"
+
+
+# 번개장터 상품상태 5단계 매핑.
+_BUNJANG_CONDITION_THRESHOLDS: tuple[tuple[float, str], ...] = (
+    (9.0, "새 상품 (미사용)"),
+    (7.5, "사용감 없음"),
+    (6.0, "사용감 적음"),
+    (3.0, "사용감 많음"),
+    (0.0, "고장/파손 상품"),
+)
+
+
+def condition_to_bunjang(score: float) -> str:
+    """0~10 컨디션 점수를 번개장터 상품상태 5단계로 변환한다."""
+    for lower, label in _BUNJANG_CONDITION_THRESHOLDS:
+        if score >= lower:
+            return label
+    return "고장/파손 상품"

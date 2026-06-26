@@ -58,6 +58,28 @@ def verify(name: str) -> None:
                 continue
             mark = "OK " if count > 0 else "X  "
             print(f"   [{mark}] {key}: {sel}  (count={count})")
+
+        # 카테고리 스코프 클릭 점검(등록은 하지 않음)
+        sample = {
+            "bunjang": "여성의류 > 상의 > 니트/스웨터",
+        }.get(name)
+        if spec.category_container and sample:
+            print(f"  카테고리 단계 클릭 시도: {sample}")
+            ok = True
+            for seg in sample.split(">"):
+                seg = seg.strip()
+                target = f'{spec.category_container} li:has-text("{seg}")'
+                try:
+                    page.click(target, timeout=7000)
+                    print(f"   [OK ] {seg}")
+                except Exception as exc:
+                    ok = False
+                    print(f"   [X  ] {seg}: {type(exc).__name__}")
+                    break
+            print(f"  카테고리 클릭 후 URL: {page.url} (변하지 않아야 정상)")
+            if ok and page.url == spec.new_listing_url:
+                print("  [성공] 카테고리 자동 선택 동작 확인(페이지 이동 없음)")
+
         browser.close()
 
 

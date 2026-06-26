@@ -72,17 +72,27 @@ class FormPlatformAdapter(PlatformAdapter):
         await page.click(login.submit_selector)
 
     async def _select_category(self, page: BrowserPage, category: str) -> None:
-        """카테고리 UI 를 열고 'A > B > C' 경로를 글자로 찾아 단계별 클릭한다.
+        """카테고리 컨테이너 안에서 'A > B > C' 경로를 단계별로 클릭한다.
 
-        정확한 셀렉터를 몰라도 텍스트 매칭으로 클릭하므로 팝업/트리 구조에 강건하다.
+        container 로 범위를 좁히고 li 의 정확한 텍스트(:text-is)로 매칭하므로,
+        헤더 메뉴·브레드크럼 등 같은 글자와 충돌하지 않는다. container/opener 가
+        모두 비어 있으면 카테고리는 수동 선택으로 간주하고 아무것도 하지 않는다.
         """
-        if not self.spec.category_opener or not category:
+        if not category:
             return
-        await page.click(self.spec.category_opener)
+        if not self.spec.category_container and not self.spec.category_opener:
+            return
+        if self.spec.category_opener:
+            await page.click(self.spec.category_opener)
+        container = self.spec.category_container
         for segment in str(category).split(">"):
             seg = segment.strip()
-            if seg:
-                await page.click(f"text={seg}")
+            if not seg:
+                continue
+            if container:
+                await page.click(f'{container} li:has-text("{seg}")')
+            else:
+                await page.click(f'text="{seg}"')
         if self.spec.category_confirm:
             await page.click(self.spec.category_confirm)
 
@@ -108,6 +118,14 @@ class FormPlatformAdapter(PlatformAdapter):
 
         if self.spec.image_field is not None and payload.image_paths:
             await page.set_input_files(self.spec.image_field.selector, list(payload.image_paths))
+
+        # 버튼→드롭다운 단일 선택(상품상태/사이즈 등)
+        for ps in self.spec.popup_selects:
+            value = payload.fields.get(ps.key)
+            if value is None or value == "":
+                continue
+            await page.click(ps.trigger)
+            await page.click(f'{ps.scope} {ps.item}:has-text("{value}")')
 
         await page.click(self.spec.submit_selector)
 
