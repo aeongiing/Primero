@@ -128,3 +128,30 @@ async def test_delete_listing_clicks_confirm():
     assert ("goto", "https://t/manage/ITEM-7") in page.records
     assert ("click", "#delete") in page.records
     assert ("click", "#confirm") in page.records
+
+
+async def test_radio_field_clicks_mapped_selector():
+    radio_spec = PlatformFormSpec(
+        **{
+            **_SPEC.__dict__,
+            "fields": (
+                FormField("title", "#title"),
+                FormField(
+                    "condition", "", FieldKind.radio,
+                    options={"중고": "#used", "새상품": "#new"},
+                ),
+            ),
+        }
+    )
+
+    class _RadioAdapter(FormPlatformAdapter):
+        spec = radio_spec
+
+    page = FakePage(texts={"#result-id": "X"})
+    adapter = _RadioAdapter(FakeBrowser(page))
+
+    # condition=새상품 → #new 클릭
+    payload = ListingPayload(fields={"title": "자켓", "condition": "새상품"})
+    await adapter.create_listing(_creds(), payload)
+    assert ("click", "#new") in page.records
+    assert ("click", "#used") not in page.records

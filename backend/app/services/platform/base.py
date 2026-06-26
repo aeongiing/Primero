@@ -79,6 +79,10 @@ class FormPlatformAdapter(PlatformAdapter):
                 continue
             if f.kind is FieldKind.select:
                 await page.select_option(f.selector, str(value))
+            elif f.kind is FieldKind.radio:
+                target = f.options.get(str(value))
+                if target:
+                    await page.click(target)
             else:
                 await page.fill(f.selector, str(value))
 

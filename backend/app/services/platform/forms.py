@@ -8,7 +8,7 @@
 매핑/오케스트레이션 로직은 이 값과 무관하게 테스트로 검증된다.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 
 
@@ -17,6 +17,7 @@ class FieldKind(str, Enum):
     fill = "fill"        # 텍스트 입력
     select = "select"    # 드롭다운 선택
     files = "files"      # 파일 업로드
+    radio = "radio"      # 라디오/옵션 클릭(값 → 셀렉터 매핑)
 
 
 @dataclass(frozen=True)
@@ -26,10 +27,13 @@ class FormField:
     - key: 매핑 엔진 payload 의 키(예: "title", "price", "category").
     - selector: 해당 입력 요소의 셀렉터(실제 DOM 확정 필요).
     - kind: 입력 방식.
+    - options: kind=radio 일 때 payload 값 → 클릭할 셀렉터 매핑.
+      (예: {"중고": "#used", "새상품": "#new"})
     """
     key: str
     selector: str
     kind: FieldKind = FieldKind.fill
+    options: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
