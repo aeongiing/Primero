@@ -32,6 +32,9 @@ htmlcov/
 # DOM 캡처 결과(로그인된 개인 화면 포함 가능)
 captured/
 
+# 로그인 세션(인증 토큰 포함, 비밀)
+auth/
+
 # misc
 .DS_Store
 *.pem

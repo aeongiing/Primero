@@ -9,6 +9,7 @@ Playwright 는 무거운 선택 의존이라 실제 구현 내부에서 지연 i
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from pathlib import Path
 
 
 @dataclass(frozen=True)
@@ -95,10 +96,14 @@ class PlaywrightBrowser(BrowserAutomation):
 
     실행 전 1회 `playwright install chromium` 이 필요하다. 헤드리스 여부는
     설정(browser_headless)에서 주입한다.
+
+    storage_state(로그인 세션 파일)를 주면 이미 로그인된 상태로 시작한다.
+    이 파일은 인증 토큰을 담으므로 비밀로 취급한다(auth/ gitignore).
     """
 
-    def __init__(self, headless: bool = True):
+    def __init__(self, headless: bool = True, storage_state: str | None = None):
         self._headless = headless
+        self._storage_state = storage_state
         self._pw = None
         self._browser = None
 
@@ -111,7 +116,10 @@ class PlaywrightBrowser(BrowserAutomation):
 
     async def new_page(self) -> BrowserPage:
         await self._ensure_browser()
-        context = await self._browser.new_context()
+        kwargs: dict = {}
+        if self._storage_state and Path(self._storage_state).exists():
+            kwargs["storage_state"] = self._storage_state
+        context = await self._browser.new_context(**kwargs)
         page = await context.new_page()
         return PlaywrightPage(page)
 

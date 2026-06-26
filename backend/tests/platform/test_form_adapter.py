@@ -155,3 +155,22 @@ async def test_radio_field_clicks_mapped_selector():
     await adapter.create_listing(_creds(), payload)
     assert ("click", "#new") in page.records
     assert ("click", "#used") not in page.records
+
+
+async def test_session_based_skips_form_login():
+    # 로그인 URL 이 없으면(저장된 세션 사용) 폼 로그인을 건너뛴다.
+    nologin_spec = PlatformFormSpec(
+        **{**_SPEC.__dict__, "login": LoginSpec("", "", "", "", "")}
+    )
+
+    class _NoLoginAdapter(FormPlatformAdapter):
+        spec = nologin_spec
+
+    page = FakePage(texts={"#result-id": "X"})
+    adapter = _NoLoginAdapter(FakeBrowser(page))
+
+    await adapter.create_listing(_creds(), _payload())
+
+    # 로그인 페이지로 이동하지 않고 바로 등록 폼으로 간다
+    assert not any(r[0] == "goto" and r[1] == "https://t/login" for r in page.records)
+    assert ("goto", "https://t/new") in page.records
