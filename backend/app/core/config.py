@@ -32,6 +32,11 @@ class Settings(BaseSettings):
 
     # OpenClaw
     openclaw_api_url: str = ""
+    
+    # Poller Worker
+    polling_interval_seconds: int = 60
+    browser_headless: bool = True
+    secrets_manager_prefix: str = "parapara/platform"
 
     class Config:
         env_file = ".env"

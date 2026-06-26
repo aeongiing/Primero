@@ -1,22 +1,25 @@
-FROM python:3.12-slim
-
-# 런타임 환경
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1
+FROM python:3.11-slim
 
 WORKDIR /app
 
-# 의존성 먼저 설치 (레이어 캐시 활용)
+# Playwright 및 시스템 의존성 설치
+RUN apt-get update && apt-get install -y \
+    wget \
+    gnupg \
+    fonts-nanum \
+    fonts-noto-cjk \
+    && rm -rf /var/lib/apt/lists/*
+
+# Python 의존성 설치
 COPY requirements.txt .
-RUN pip install --upgrade pip && pip install -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
-# 앱 소스 복사
-COPY app ./app
+# Playwright Chromium 설치
+RUN playwright install chromium && \
+    playwright install-deps chromium
 
-# Render/Railway 등은 $PORT 를 주입한다. 로컬 기본값 8000.
-ENV PORT=8000
-EXPOSE 8000
+# 애플리케이션 코드 복사
+COPY . .
 
-# 셸 형태로 실행해 $PORT 치환이 동작하게 한다.
-CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT}
+# 기본 명령 (FastAPI 서버)
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

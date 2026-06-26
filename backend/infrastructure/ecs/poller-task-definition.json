@@ -1,0 +1,55 @@
+{
+  "family": "parapara-poller",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::ACCOUNT_ID:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::ACCOUNT_ID:role/parapara-poller-task-role",
+  "containerDefinitions": [
+    {
+      "name": "poller",
+      "image": "ACCOUNT_ID.dkr.ecr.ap-northeast-2.amazonaws.com/parapara-backend:latest",
+      "command": ["python", "-m", "workers.poller"],
+      "environment": [
+        {
+          "name": "POLLING_INTERVAL_SECONDS",
+          "value": "60"
+        },
+        {
+          "name": "BROWSER_HEADLESS",
+          "value": "true"
+        },
+        {
+          "name": "AWS_REGION",
+          "value": "ap-northeast-2"
+        },
+        {
+          "name": "SECRETS_MANAGER_PREFIX",
+          "value": "parapara/platform"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "DATABASE_URL",
+          "valueFrom": "arn:aws:secretsmanager:ap-northeast-2:ACCOUNT_ID:secret:parapara/database-url"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/parapara-poller",
+          "awslogs-region": "ap-northeast-2",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "healthCheck": {
+        "command": ["CMD-SHELL", "ps aux | grep 'python -m workers.poller' || exit 1"],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 60
+      }
+    }
+  ]
+}
