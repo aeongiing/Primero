@@ -1,6 +1,8 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
 
+from app.schemas.platform import PlatformAccountOut
+
 router = APIRouter(prefix="/platform-accounts", tags=["platform-accounts"])
 
 
@@ -8,12 +10,6 @@ class PlatformAccountCreate(BaseModel):
     platform: str  # karrot|bunjang|fruits|charan|ebay
     username: str
     password: str  # Secrets Manager에 암호화 저장, 평문은 즉시 폐기
-
-
-class PlatformAccountOut(BaseModel):
-    id: str
-    platform: str
-    is_active: bool
 
 
 @router.get("", response_model=list[PlatformAccountOut])

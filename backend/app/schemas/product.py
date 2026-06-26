@@ -5,6 +5,7 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 
 from app.models.product import ProductStatus
+from app.schemas.listing import ListingOut
 
 
 class ProductImageOut(BaseModel):
@@ -60,5 +61,6 @@ class ProductOut(BaseModel):
     rise: Optional[int]
     created_at: datetime
     images: List[ProductImageOut] = []
+    listings: List[ListingOut] = []
 
     model_config = {"from_attributes": True}

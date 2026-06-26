@@ -9,6 +9,7 @@ from app.models.listing import ListingStatus
 class ListingOut(BaseModel):
     id: uuid.UUID
     product_id: uuid.UUID
+    platform_account_id: uuid.UUID
     platform: str
     platform_product_id: str
     status: ListingStatus
