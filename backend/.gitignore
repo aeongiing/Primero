@@ -1,0 +1,34 @@
+# ignore frontend folder from backend context
+/frontend
+/../frontend
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# virtual environment
+.venv/
+venv/
+env/
+
+# env files
+.env
+.env.*
+!.env.example
+
+# test / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# misc
+.DS_Store
+*.pem

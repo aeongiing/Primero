@@ -1,0 +1,6 @@
+# macOS
+.DS_Store
+
+# 각 폴더 전용 .gitignore 참고
+# frontend/ → frontend/.gitignore
+# backend/  → backend/.gitignore
