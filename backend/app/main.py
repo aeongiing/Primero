@@ -38,8 +38,12 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3001"],  # 프론트 개발 서버
-    allow_origin_regex=r"http://localhost:\d+",  # 로컬 dev 포트 전부 허용
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://100.53.237.32:3000",  # 팀 내부 서버
+    ],
+    allow_origin_regex=r"(http://localhost:\d+|https://.*\.vercel\.app)",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
