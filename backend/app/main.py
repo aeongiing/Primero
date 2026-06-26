@@ -42,6 +42,8 @@ app.add_middleware(
         "http://localhost:3000",
         "http://localhost:3001",
         "http://100.53.237.32:3000",  # 팀 내부 서버
+        "https://paraparavintage.vercel.app",  # Vercel 프로덕션
+        "https://paraparavintage-pdu3c4ru7-aeongiings-projects.vercel.app",  # Vercel Preview
     ],
     allow_origin_regex=r"(http://localhost:\d+|https://.*\.vercel\.app)",
     allow_credentials=True,
