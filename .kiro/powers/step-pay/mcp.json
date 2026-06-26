@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "step-pay": {
+      "command": "uvx",
+      "args": ["steppay-mcp-server@latest"],
+      "env": {
+        "STEPPAY_API_KEY": "${STEPPAY_API_KEY}",
+        "FASTMCP_LOG_LEVEL": "ERROR"
+      },
+      "disabled": true,
+      "autoApprove": []
+    }
+  }
+}

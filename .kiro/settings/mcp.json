@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "platform-docs": {
+      "command": "uvx",
+      "args": ["mcp-server-fetch"],
+      "env": {
+        "FASTMCP_LOG_LEVEL": "ERROR"
+      },
+      "disabled": false,
+      "autoApprove": ["fetch"]
+    }
+  }
+}
