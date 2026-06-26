@@ -71,10 +71,27 @@ class FormPlatformAdapter(PlatformAdapter):
         await page.fill(login.password_selector, credentials.password)
         await page.click(login.submit_selector)
 
+    async def _select_category(self, page: BrowserPage, category: str) -> None:
+        """카테고리 UI 를 열고 'A > B > C' 경로를 글자로 찾아 단계별 클릭한다.
+
+        정확한 셀렉터를 몰라도 텍스트 매칭으로 클릭하므로 팝업/트리 구조에 강건하다.
+        """
+        if not self.spec.category_opener or not category:
+            return
+        await page.click(self.spec.category_opener)
+        for segment in str(category).split(">"):
+            seg = segment.strip()
+            if seg:
+                await page.click(f"text={seg}")
+        if self.spec.category_confirm:
+            await page.click(self.spec.category_confirm)
+
     async def create_listing(self, credentials: Credentials, payload: ListingPayload) -> str:
         page = await self.browser.new_page()
         await self._login(page, credentials)
         await page.goto(self.spec.new_listing_url)
+
+        await self._select_category(page, payload.fields.get("category", ""))
 
         for f in self.spec.fields:
             value = payload.fields.get(f.key)

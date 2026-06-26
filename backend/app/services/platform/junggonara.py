@@ -58,6 +58,7 @@ class JunggonaraAdapter(FormPlatformAdapter):
         ),
         image_field=FormField("images", 'input[type="file"]', FieldKind.files),
         submit_selector='button[type="submit"]',
+        category_opener='button:has-text("카테고리")',
         listing_id_selector="",    # TODO: 등록 후 결과 화면 캡처 후 채움
         listing_id_attribute=None,
         listing_url_template="",

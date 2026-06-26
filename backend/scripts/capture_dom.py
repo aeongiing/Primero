@@ -56,10 +56,22 @@ def capture(out_name: str, start_url: str | None) -> None:
     out_dir = Path(__file__).resolve().parent.parent / "captured"
     out_dir.mkdir(exist_ok=True)
 
+    # 저장된 로그인 세션 자동 사용: 이름의 앞부분(예: bunjang_category -> bunjang)
+    auth_dir = Path(__file__).resolve().parent.parent / "auth"
+    platform = out_name.split("_")[0]
+    auth_file = auth_dir / f"{platform}.json"
+    storage_state = str(auth_file) if auth_file.exists() else None
+
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=False)
-        context = browser.new_context()
+        context = browser.new_context(
+            **({"storage_state": storage_state} if storage_state else {})
+        )
         page = context.new_page()
+        if storage_state:
+            print(f"(저장된 로그인 세션 사용: {auth_file.name})")
+        else:
+            print("(저장된 세션 없음 → 창에서 직접 로그인 필요)")
         if start_url:
             page.goto(start_url)
 

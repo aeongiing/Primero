@@ -174,3 +174,27 @@ async def test_session_based_skips_form_login():
     # 로그인 페이지로 이동하지 않고 바로 등록 폼으로 간다
     assert not any(r[0] == "goto" and r[1] == "https://t/login" for r in page.records)
     assert ("goto", "https://t/new") in page.records
+
+
+async def test_category_navigates_by_text_path():
+    # 카테고리 opener 클릭 후 'A > B' 경로를 글자로 찾아 단계별 클릭한다.
+    cat_spec = PlatformFormSpec(
+        **{
+            **_SPEC.__dict__,
+            "fields": (FormField("title", "#title"),),
+            "category_opener": 'button:has-text("카테고리")',
+        }
+    )
+
+    class _CatAdapter(FormPlatformAdapter):
+        spec = cat_spec
+
+    page = FakePage(texts={"#result-id": "X"})
+    adapter = _CatAdapter(FakeBrowser(page))
+
+    payload = ListingPayload(fields={"title": "자켓", "category": "아우터 > 자켓"})
+    await adapter.create_listing(_creds(), payload)
+
+    assert ("click", 'button:has-text("카테고리")') in page.records
+    assert ("click", "text=아우터") in page.records
+    assert ("click", "text=자켓") in page.records

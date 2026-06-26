@@ -58,6 +58,9 @@ class PlatformFormSpec:
     submit_selector: str
     listing_id_selector: str
     listing_id_attribute: str | None = None  # None 이면 text, 아니면 해당 attribute 값
+    # 카테고리(팝업/트리 선택). opener 를 누른 뒤 "A > B" 경로를 글자로 찾아 클릭.
+    category_opener: str = ""          # 카테고리 선택 UI 를 여는 버튼 셀렉터
+    category_confirm: str = ""         # 선택 확정 버튼(있으면)
     # 판매 여부 조회
     listing_url_template: str = ""           # "{id}" 치환
     sold_selector: str = ""
