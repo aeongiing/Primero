@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getToken, clearToken } from "@/lib/api";
 
@@ -16,11 +16,12 @@ function SearchIcon() {
 
 export default function SiteHeader() {
   const router = useRouter();
+  const pathname = usePathname();
   const [loggedIn, setLoggedIn] = useState(false);
 
   useEffect(() => {
     setLoggedIn(!!getToken());
-  }, []);
+  }, [pathname]);
 
   const handleLogout = () => {
     clearToken();
