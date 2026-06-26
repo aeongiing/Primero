@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { getToken, clearToken } from "@/lib/api";
+import { getToken } from "@/lib/api";
 
 function SearchIcon() {
   return (
@@ -15,7 +15,6 @@ function SearchIcon() {
 }
 
 export default function SiteHeader() {
-  const router = useRouter();
   const pathname = usePathname();
   const [loggedIn, setLoggedIn] = useState(false);
 
@@ -23,15 +22,9 @@ export default function SiteHeader() {
     setLoggedIn(!!getToken());
   }, [pathname]);
 
-  const handleLogout = () => {
-    clearToken();
-    setLoggedIn(false);
-    router.push("/login");
-  };
-
   return (
     <header className="border-b">
-      {/* 1) 상단 다크 프로모 바 */}
+      {/* 상단 다크 프로모 바 */}
       <div className="bg-foreground text-background">
         <div className="mx-auto flex h-11 max-w-[1280px] items-center justify-center gap-4 px-6 text-[15px]">
           <span className="text-lg font-bold" style={{ fontFamily: "var(--font-logo)" }}>ParaPara</span>
@@ -45,7 +38,7 @@ export default function SiteHeader() {
         </div>
       </div>
 
-      {/* 2) 메인 헤더 */}
+      {/* 메인 헤더 */}
       <div>
         <div className="mx-auto flex h-16 max-w-[1280px] items-center gap-7 px-6">
           <Link
@@ -69,22 +62,10 @@ export default function SiteHeader() {
           </label>
 
           <nav className="flex items-center gap-6 text-[15px]">
-            <Link href="/settings" className="hover:text-brand transition-colors">
-              설정
-            </Link>
             {loggedIn ? (
-              <>
-                <Link href="/mypage" className="hover:text-brand transition-colors">
-                  마이페이지
-                </Link>
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="hover:text-brand transition-colors"
-                >
-                  로그아웃
-                </button>
-              </>
+              <Link href="/mypage" className="hover:text-brand transition-colors">
+                마이페이지
+              </Link>
             ) : (
               <Link href="/login" className="hover:text-brand transition-colors">
                 로그인
