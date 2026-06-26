@@ -1,18 +1,130 @@
-"""[윤채린] AI 분석 파이프라인 오케스트레이션.
+"""[윤채린] AI 분석 파이프라인.
 
-S3 업로드된 이미지를 받아 분류(classifier) → 설명 생성(description)을
-순서대로 호출하고 AIAnalysisResult로 합쳐 반환한다.
+Claude 멀티모달 단일 호출 → 플랫폼별 매핑을 수행한다.
 """
 
-from app.schemas.ai import AIAnalysisResult
+from typing import Dict, List
+
+from app.schemas.ai import AIAnalysisResult, PlatformMapping
+from app.services.ai.classifier import analyze_with_claude
+
+# ─── 차란 → 번개장터 카테고리 매핑 ───
+
+_CHARAN_TO_BUNJANG: Dict[str, str] = {
+    "아우터 > 코트": "아우터 > 코트",
+    "아우터 > 재킷": "아우터 > 자켓",
+    "아우터 > 점퍼": "아우터 > 점퍼",
+    "아우터 > 조끼": "아우터 > 조끼/베스트",
+    "아우터 > 집업": "아우터 > 가디건",
+    "아우터 > 카디건": "아우터 > 가디건",
+    "상의 > 니트": "상의 > 니트/스웨터",
+    "상의 > 티셔츠": "상의 > 반팔 티셔츠",
+    "상의 > 블라우스/셔츠": "상의 > 셔츠",
+    "하의 > 팬츠": "바지 > 면바지",
+    "하의 > 스커트": "치마 > 미디 스커트",
+    "원피스 > 원피스": "원피스 > 미디 원피스",
+    "세트 > 정장세트": "셋업/세트 > 정장/셋업",
+    "세트 > 트레이닝 세트": "셋업/세트 > 트레이닝/스웨트 셋업",
+}
+
+_CHARAN_TO_EBAY: Dict[str, str] = {
+    "아우터 > 코트": "Outerwear Coats & Jackets",
+    "아우터 > 재킷": "Outerwear Coats & Jackets",
+    "아우터 > 점퍼": "Outerwear Coats & Jackets",
+    "아우터 > 조끼": "Vests",
+    "아우터 > 집업": "Sweaters",
+    "아우터 > 카디건": "Sweaters",
+    "상의 > 니트": "Sweaters",
+    "상의 > 티셔츠": "T-Shirts",
+    "상의 > 블라우스/셔츠": "Casual Shirts",
+    "하의 > 팬츠": "Pants",
+    "하의 > 스커트": "Skirts",
+    "원피스 > 원피스": "Dresses",
+    "세트 > 정장세트": "Suits",
+    "세트 > 트레이닝 세트": "Sweats & Tracksuits",
+}
 
 
-async def analyze(s3_keys: list[str]) -> AIAnalysisResult:
-    """이미지 S3 key 목록을 받아 종합 분석 결과를 반환한다.
+def _map_charan(result: Dict) -> PlatformMapping:
+    return PlatformMapping(
+        platform="charan",
+        category=result["category"],
+        title=result["title"],
+        description=result["description"],
+        extra_fields={
+            "colors": result["colors"],
+            "season": result["season"],
+            "pattern": result["pattern"],
+            "materials": result["materials"],
+            "style": result["style"],
+        },
+        missing_required=[f for f in ["소재"] if not result["materials"]],
+    )
 
-    TODO:
-      1. classifier.classify() 로 카테고리·색상 추출
-      2. description.generate() 로 상품 설명 생성
-      3. 결과를 AIAnalysisResult 로 병합
-    """
-    raise NotImplementedError
+
+def _map_bunjang(result: Dict) -> PlatformMapping:
+    category = _CHARAN_TO_BUNJANG.get(result["category"], "상의 > 반팔 티셔츠")
+    desc = result["description"]
+    if result["materials"]:
+        desc += f"\n\n소재: {', '.join(result['materials'])}"
+    if result["season"]:
+        desc += f"\n계절: {', '.join(result['season'])}"
+    return PlatformMapping(
+        platform="bunjang",
+        category=category,
+        title=result["title"],
+        description=desc,
+    )
+
+
+def _map_karrot(result: Dict) -> PlatformMapping:
+    return PlatformMapping(
+        platform="karrot",
+        category="여성의류",
+        title=result["title"],
+        description=result["description"],
+        missing_required=["가격", "거래희망장소"],
+    )
+
+
+def _map_ebay(result: Dict) -> PlatformMapping:
+    category = _CHARAN_TO_EBAY.get(result["category"], "Other Men's Vintage Clothing")
+    return PlatformMapping(
+        platform="ebay",
+        category=f"Women's Vintage Clothing > {category}",
+        title=result["title"][:80],
+        description=result["description"],
+        missing_required=["condition"],
+    )
+
+
+async def analyze(s3_keys: List[str]) -> AIAnalysisResult:
+    """이미지 → Claude 분석 → 플랫폼별 매핑 결과를 반환한다."""
+    result = await analyze_with_claude(s3_keys)
+
+    mappings = [
+        _map_charan(result),
+        _map_bunjang(result),
+        _map_karrot(result),
+        _map_ebay(result),
+    ]
+
+    return AIAnalysisResult(
+        title=result.get("title", "중고 의류"),
+        brand=result.get("brand", "미상"),
+        category=result.get("category", "상의 > 티셔츠"),
+        description=result.get("description", ""),
+        condition=5,
+        size=None,
+        chest=None,
+        total_length=None,
+        waist=None,
+        hip=None,
+        rise=None,
+        colors=result.get("colors", ["블랙"]),
+        material=result.get("materials", []),
+        pattern=result.get("pattern", "무지"),
+        style=result.get("style", ["베이직"]),
+        season=result.get("season", ["봄", "가을"]),
+        platform_mappings=mappings,
+    )

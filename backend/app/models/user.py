@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from typing import List
 
 from sqlalchemy import String, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -15,5 +16,5 @@ class User(Base):
     google_id: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
-    products: Mapped[list["Product"]] = relationship(back_populates="user")
-    platform_accounts: Mapped[list["PlatformAccount"]] = relationship(back_populates="user")
+    products: Mapped[List["Product"]] = relationship(back_populates="user")
+    platform_accounts: Mapped[List["PlatformAccount"]] = relationship(back_populates="user")

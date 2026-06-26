@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from typing import Optional, List
 
 from sqlalchemy import String, Integer, ForeignKey, DateTime, Enum, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -28,24 +29,24 @@ class Product(Base):
     condition: Mapped[int] = mapped_column(Integer, nullable=False)  # 1~10
     price: Mapped[int] = mapped_column(Integer, nullable=False)
     status: Mapped[ProductStatus] = mapped_column(Enum(ProductStatus), default=ProductStatus.draft)
-    # 정규값(차란 기준). 플랫폼별 개수 제약(예: 차란 소재 최대 4)은 매핑 엔진에서 절단한다.
-    colors: Mapped[list[str]] = mapped_column(JSON, default=list)
-    materials: Mapped[list[str]] = mapped_column(JSON, default=list)
-    size: Mapped[str | None] = mapped_column(String(20))
-    chest: Mapped[int | None] = mapped_column(Integer)
-    total_length: Mapped[int | None] = mapped_column(Integer)
-    waist: Mapped[int | None] = mapped_column(Integer)
-    hip: Mapped[int | None] = mapped_column(Integer)
-    rise: Mapped[int | None] = mapped_column(Integer)
+    # 정규값(차란 기준). 플랫폼별 개수 제약은 매핑 엔진에서 절단한다.
+    colors: Mapped[list] = mapped_column(JSON, default=list)
+    materials: Mapped[list] = mapped_column(JSON, default=list)
+    size: Mapped[Optional[str]] = mapped_column(String(20))
+    chest: Mapped[Optional[int]] = mapped_column(Integer)
+    total_length: Mapped[Optional[int]] = mapped_column(Integer)
+    waist: Mapped[Optional[int]] = mapped_column(Integer)
+    hip: Mapped[Optional[int]] = mapped_column(Integer)
+    rise: Mapped[Optional[int]] = mapped_column(Integer)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     user: Mapped["User"] = relationship(back_populates="products")
-    images: Mapped[list["ProductImage"]] = relationship(
+    images: Mapped[List["ProductImage"]] = relationship(
         back_populates="product",
         order_by="ProductImage.order",
         cascade="all, delete-orphan",
     )
-    listings: Mapped[list["Listing"]] = relationship(
+    listings: Mapped[List["Listing"]] = relationship(
         back_populates="product",
         cascade="all, delete-orphan",
     )

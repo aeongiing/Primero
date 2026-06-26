@@ -6,17 +6,21 @@
 """
 
 import uuid
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status as http_status
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.deps import get_db, get_current_user_id
 from app.domain.mapping.config import ACTIVE_PLATFORMS
 from app.models.product import Product, ProductStatus
+from app.models.product_image import ProductImage
 from app.schemas.product import ProductCreate, ProductOut, ProductUpdate
 from app.schemas.ai import AIAnalysisResult
+from app.schemas.media import ImageUploadOut
+from app.services.media.s3 import upload, build_key, UploadValidationError, S3StorageError
 
 router = APIRouter(prefix="/products", tags=["products"])
 
@@ -42,9 +46,70 @@ async def _get_owned_product(
 
 
 @router.post("/analyze", response_model=AIAnalysisResult)
-async def analyze_images(images: list[UploadFile] = File(...)):
-    # 담당: 백엔드 A (윤채린) — S3 업로드 → Rekognition 분석 → Claude 설명 생성
-    raise NotImplementedError
+async def analyze_images(
+    images: List[UploadFile] = File(...),
+    user_id: uuid.UUID = Depends(get_current_user_id),
+):
+    """사진을 S3에 임시 업로드 후 AI 분석 → 플랫폼별 매핑 결과를 반환한다."""
+    from app.services.ai.pipeline import analyze
+
+    # 임시 키로 S3에 업로드
+    s3_keys: List[str] = []
+    temp_product_id = uuid.uuid4()
+    for idx, file in enumerate(images):
+        key = build_key(user_id, temp_product_id, idx)
+        try:
+            await upload(file, key)
+        except UploadValidationError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        except S3StorageError as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        s3_keys.append(key)
+
+    # AI 분석 파이프라인 실행
+    result = await analyze(s3_keys)
+    return result
+
+
+@router.post("/{product_id}/images", response_model=list[ImageUploadOut], status_code=201)
+async def upload_images(
+    product_id: uuid.UUID,
+    files: list[UploadFile] = File(...),
+    db: AsyncSession = Depends(get_db),
+    user_id: uuid.UUID = Depends(get_current_user_id),
+):
+    """상품 사진을 S3에 업로드하고 DB에 기록한다.
+
+    순서(order)는 기존 이미지 수 기준으로 자동 부여된다.
+    역할 순서: 앞(0)/확대(1)/뒤(2)/디테일(3)/오염(4)/태그(5).
+    """
+    product = await _get_owned_product(product_id, user_id, db)
+
+    # 현재 이미지 수 확인 → order 시작점
+    count_result = await db.execute(
+        select(func.count()).where(ProductImage.product_id == product.id)
+    )
+    start_order = count_result.scalar() or 0
+
+    results: list[ProductImage] = []
+    for idx, file in enumerate(files):
+        order = start_order + idx
+        key = build_key(user_id, product_id, order)
+        try:
+            await upload(file, key)
+        except UploadValidationError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        except S3StorageError as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+        image = ProductImage(product_id=product.id, s3_key=key, order=order)
+        db.add(image)
+        results.append(image)
+
+    await db.commit()
+    for img in results:
+        await db.refresh(img)
+    return results
 
 
 @router.post("", response_model=ProductOut, status_code=201)
@@ -96,7 +161,7 @@ async def create_product(
 
 @router.get("", response_model=list[ProductOut])
 async def list_products(
-    status: ProductStatus | None = None,
+    status: Optional[ProductStatus] = None,
     db: AsyncSession = Depends(get_db),
     user_id: uuid.UUID = Depends(get_current_user_id),
 ):
