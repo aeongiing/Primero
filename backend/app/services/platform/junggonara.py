@@ -1,16 +1,17 @@
-"""[여원] 번개장터 어댑터 (Playwright 기반).
+"""[여원] 중고나라 어댑터 (Playwright 기반).
 
-⚠️ 셀렉터/URL 은 실제 번개장터 웹 DOM 분석 후 채워야 한다. 번개는 컨디션 등급
-필드가 없어 컨디션은 description 본문에 포함된다(매핑 엔진에서 처리됨).
+⚠️ 셀렉터/URL 은 실제 중고나라 웹(web.joongna.com) DOM 분석 후 채워야 한다.
+중고나라는 컨디션을 등급이 아닌 상품상태(중고/새상품)로 받고, 구성품·거래방법
+같은 고유 필드가 있다(매핑 엔진에서 채워짐).
 """
 
 from app.services.platform.base import FormPlatformAdapter
 from app.services.platform.forms import FieldKind, FormField, LoginSpec, PlatformFormSpec
 
 
-class BunjangAdapter(FormPlatformAdapter):
+class JunggonaraAdapter(FormPlatformAdapter):
     spec = PlatformFormSpec(
-        platform="bunjang",
+        platform="junggonara",
         login=LoginSpec(
             url="",
             username_selector="",
@@ -22,8 +23,11 @@ class BunjangAdapter(FormPlatformAdapter):
         fields=(
             FormField("title", ""),
             FormField("category", "", FieldKind.select),
-            FormField("description", ""),
             FormField("price", ""),
+            FormField("description", ""),
+            FormField("condition", "", FieldKind.select),       # 중고/새상품
+            FormField("components", "", FieldKind.select),       # 없음/일부 포함/전체 포함
+            FormField("trade_method", "", FieldKind.select),     # 택배/직거래/편의점픽업
         ),
         image_field=FormField("images", "", FieldKind.files),
         submit_selector="",

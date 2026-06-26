@@ -91,3 +91,21 @@ def test_karrot_size_is_free_string():
 def test_unknown_platform_raises():
     with pytest.raises(ValueError):
         map_product(_product(), "nonexistent")
+
+
+def test_junggonara_used_condition_and_defaults():
+    result = map_product(_product(condition=8.0), "junggonara")
+    assert result.ok
+    # 컨디션은 등급이 아니라 중고/새상품
+    assert result.payload["condition"] == "중고"
+    # 구성품/거래방법 기본값이 채워진다
+    assert result.payload["components"] == "없음"
+    assert result.payload["trade_method"] == "택배거래"
+    # 등급/색상/소재 등 차란 전용 필드는 없음
+    assert result.payload.get("colors") is None
+
+
+def test_junggonara_new_condition_for_high_score():
+    result = map_product(_product(condition=9.5), "junggonara")
+    assert result.payload["condition"] == "새상품"
+

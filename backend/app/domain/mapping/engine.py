@@ -5,7 +5,7 @@
 """
 
 from app.domain.mapping.config import ListFieldRule, PlatformConfig, PLATFORM_CONFIGS
-from app.domain.mapping.grades import condition_to_grade
+from app.domain.mapping.grades import condition_to_grade, condition_to_new_used
 from app.domain.mapping.models import CanonicalProduct, MappingResult
 
 # 페이로드에 공통으로 복사하는 스칼라 필드.
@@ -93,9 +93,11 @@ def map_product(product: CanonicalProduct, platform: str) -> MappingResult:
     elif not _is_empty(product.size):
         result.unmapped_fields["size"] = [product.size]  # type: ignore[list-item]
 
-    # 4) 컨디션 등급 (지원 플랫폼만 별도 필드)
+    # 4) 컨디션 (플랫폼별 표기 방식)
     if config.supports_condition_grade:
         payload["condition"] = condition_to_grade(product.condition)
+    elif config.condition_as_new_used:
+        payload["condition"] = condition_to_new_used(product.condition)
 
     # 5) 리스트 필드 (플랫폼이 지원하는 것만)
     for field_name, rule in config.list_fields.items():
@@ -106,7 +108,11 @@ def map_product(product: CanonicalProduct, platform: str) -> MappingResult:
         if unmapped:
             result.unmapped_fields[field_name] = unmapped
 
-    # 6) 필수 필드 검증
+    # 6) 플랫폼 고유 정적 기본값(payload 에 없을 때만)
+    for key, value in config.defaults.items():
+        payload.setdefault(key, value)
+
+    # 7) 필수 필드 검증
     for f in config.required:
         if _is_empty(payload.get(f)):
             result.missing_required.append(f)

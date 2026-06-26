@@ -1,20 +1,37 @@
-"""[여원] Fruits 어댑터 (OpenClaw 기반)."""
+"""[여원] Fruits 어댑터 (Playwright 기반).
 
-from app.services.platform.base import PlatformAdapter, ListingPayload
-from app.services.platform.openclaw import OpenClawClient
+⚠️ 셀렉터/URL 은 실제 Fruits 웹 DOM 분석 후 채워야 한다.
+"""
+
+from app.services.platform.base import FormPlatformAdapter
+from app.services.platform.forms import FieldKind, FormField, LoginSpec, PlatformFormSpec
 
 
-class FruitsAdapter(PlatformAdapter):
-    platform = "fruits"
-
-    def __init__(self, client: OpenClawClient | None = None):
-        self.client = client or OpenClawClient()
-
-    async def create_listing(self, credential_key: str, payload: ListingPayload) -> str:
-        raise NotImplementedError
-
-    async def is_sold(self, credential_key: str, platform_product_id: str) -> bool:
-        raise NotImplementedError
-
-    async def delete_listing(self, credential_key: str, platform_product_id: str) -> None:
-        raise NotImplementedError
+class FruitsAdapter(FormPlatformAdapter):
+    spec = PlatformFormSpec(
+        platform="fruits",
+        login=LoginSpec(
+            url="",
+            username_selector="",
+            password_selector="",
+            submit_selector="",
+            success_selector="",
+        ),
+        new_listing_url="",
+        fields=(
+            FormField("title", ""),
+            FormField("category", "", FieldKind.select),
+            FormField("description", ""),
+            FormField("price", ""),
+        ),
+        image_field=FormField("images", "", FieldKind.files),
+        submit_selector="",
+        listing_id_selector="",
+        listing_id_attribute=None,
+        listing_url_template="",
+        sold_selector="",
+        sold_marker="sold",
+        manage_url_template="",
+        delete_selector="",
+        delete_confirm_selector="",
+    )

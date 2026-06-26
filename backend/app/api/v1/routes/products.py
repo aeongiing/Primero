@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.deps import get_db, get_current_user_id
+from app.domain.mapping.config import ACTIVE_PLATFORMS
 from app.models.product import Product, ProductStatus
 from app.schemas.product import ProductCreate, ProductOut, ProductUpdate
 from app.schemas.ai import AIAnalysisResult
@@ -57,6 +58,16 @@ async def create_product(
     플랫폼 등록 태스크 발행(작업 7)은 별도 단계이며, 인프라(SQS) 준비 후
     publisher.publish_listing_tasks 로 연결한다. 여기서는 SSOT 저장만 책임진다.
     """
+    invalid = [p for p in body.platforms if p not in ACTIVE_PLATFORMS]
+    if invalid:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"지원하지 않는 플랫폼: {invalid}. "
+                f"현재 등록 가능: {list(ACTIVE_PLATFORMS)}"
+            ),
+        )
+
     product = Product(
         user_id=user_id,
         title=body.title,

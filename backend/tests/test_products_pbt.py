@@ -38,8 +38,8 @@ product_payloads = st.fixed_dictionaries(
         "colors": st.lists(_safe_text, max_size=5),
         "materials": st.lists(_safe_text, max_size=6),
         "platforms": st.lists(
-            st.sampled_from(["karrot", "bunjang", "fruits", "charan"]),
-            max_size=4,
+            st.sampled_from(["bunjang", "junggonara"]),
+            max_size=2,
         ),
     }
 )

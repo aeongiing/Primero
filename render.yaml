@@ -27,5 +27,5 @@ services:
         sync: false
       - key: S3_BUCKET
         sync: false
-      - key: OPENCLAW_API_URL
-        sync: false
+      - key: BROWSER_HEADLESS
+        value: "true"

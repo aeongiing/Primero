@@ -230,7 +230,9 @@
 
 ## 7. 플랫폼 식별자
 
-`platform` 필드 허용 값: `karrot`(당근) · `bunjang`(번개장터) · `fruits` · `charan`(차란) · `ebay`(추후).
+`platform` 필드 허용 값: `karrot`(당근) · `bunjang`(번개장터) · `fruits` · `charan`(차란) · `junggonara`(중고나라) · `ebay`(추후).
+
+**현재 활성(웹 등록 가능) 플랫폼**: `bunjang`, `junggonara` 만. 당근·차란·fruits 는 앱 전용이라 비활성, eBay 는 추후 대상이다. `POST /products` 의 `platforms` 에 비활성 값이 오면 `422` 로 거절한다. (단일 출처: `app/domain/mapping/config.py` 의 `ACTIVE_PLATFORMS`)
 
 ---
 

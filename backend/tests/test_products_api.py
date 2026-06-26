@@ -22,7 +22,7 @@ def _valid_payload(**overrides) -> dict:
         "size": "L",
         "colors": ["블랙", "차콜"],
         "materials": ["면", "폴리에스터"],
-        "platforms": ["karrot", "bunjang"],
+        "platforms": ["bunjang", "junggonara"],
     }
     body.update(overrides)
     return body
@@ -113,3 +113,14 @@ async def test_colors_materials_default_to_empty_lists(client: AsyncClient):
     assert resp.status_code == 201
     assert resp.json()["colors"] == []
     assert resp.json()["materials"] == []
+
+
+@pytest.mark.parametrize("platforms", [["karrot"], ["charan", "bunjang"], ["fruits"], ["ebay"]])
+async def test_create_rejects_inactive_platforms(client: AsyncClient, platforms: list):
+    resp = await client.post("/api/v1/products", json=_valid_payload(platforms=platforms))
+    assert resp.status_code == 422
+
+
+async def test_create_accepts_active_platforms(client: AsyncClient):
+    resp = await client.post("/api/v1/products", json=_valid_payload(platforms=["bunjang", "junggonara"]))
+    assert resp.status_code == 201

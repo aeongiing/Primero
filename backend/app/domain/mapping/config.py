@@ -30,12 +30,16 @@ class PlatformConfig:
     required: tuple[str, ...] = ()
     # 컨디션 등급 필드 지원 여부(차란만 True).
     supports_condition_grade: bool = False
+    # 컨디션을 중고/새상품 2단계로 표기(중고나라).
+    condition_as_new_used: bool = False
     # 등급 칸이 없는 플랫폼(번개)에서 컨디션을 설명 본문에 포함할지.
     fold_condition_into_description: bool = False
     # size 허용값(차란 S/M/L). None 이면 자유 문자열.
     size_allowed: tuple[str, ...] | None = None
     # 리스트형 필드 규칙. 여기 없는 리스트 필드는 해당 플랫폼에서 미지원(드롭).
     list_fields: dict[str, ListFieldRule] = field(default_factory=dict)
+    # 플랫폼 고유 정적 기본값(예: 중고나라 구성품/거래방법). payload 에 없을 때만 채운다.
+    defaults: dict = field(default_factory=dict)
 
 
 # ---- 허용값 집합 (플랫폼 input.md, 차란 기준) -------------------------------
@@ -98,9 +102,30 @@ FRUITS = PlatformConfig(
 )
 
 
+JUNGGONARA = PlatformConfig(
+    name="junggonara",
+    required=("title", "category", "description", "price", "condition"),
+    condition_as_new_used=True,   # 상품상태: 중고/새상품
+    defaults={
+        "components": "없음",      # 구성품 기본값
+        "trade_method": "택배거래",  # 거래방법 기본값
+    },
+)
+
+
 PLATFORM_CONFIGS: dict[str, PlatformConfig] = {
     CHARAN.name: CHARAN,
     BUNJANG.name: BUNJANG,
     KARROT.name: KARROT,
     FRUITS.name: FRUITS,
+    JUNGGONARA.name: JUNGGONARA,
 }
+
+# 현재 실제 발행 대상(웹 등록 가능). 당근/차란/fruits 는 앱 전용이라 비활성,
+# eBay 는 추후 대상. 설정/어댑터는 남겨두되 이 목록으로만 발행을 허용한다.
+ACTIVE_PLATFORMS: tuple[str, ...] = ("bunjang", "junggonara")
+
+
+def is_active(platform: str) -> bool:
+    """현재 발행 가능한(활성) 플랫폼인지 여부."""
+    return platform in ACTIVE_PLATFORMS

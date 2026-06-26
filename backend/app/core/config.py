@@ -16,8 +16,8 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 60 * 24 * 7  # 7일
 
-    # OpenClaw
-    openclaw_api_url: str = ""
+    # 브라우저 자동화 (Playwright)
+    browser_headless: bool = True
 
     class Config:
         env_file = ".env"
