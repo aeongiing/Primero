@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { PLATFORMS, UPLOAD_PLATFORMS } from "@/lib/constants";
 import type { Platform } from "@/types";
+import { listProducts, type ProductOut } from "@/lib/api";
 
 type Sale = "listed" | "sold" | "draft";
 
@@ -11,11 +12,28 @@ interface MyProduct {
   id: string;
   title: string;
   price: number;
-  gender: "우먼즈웨어" | "맨즈웨어";
+  gender?: "우먼즈웨어" | "맨즈웨어";
   major: "아우터" | "상의" | "하의";
   sale: Sale;
   createdAt: string; // ISO
   listings: Partial<Record<Platform, "success" | "pending" | "failed">>;
+}
+
+// 백엔드 ProductOut → 홈 카드 모델
+function mapProduct(p: ProductOut): MyProduct {
+  const major = (["아우터", "상의", "하의"].find((m) => p.category?.includes(m)) ??
+    "상의") as MyProduct["major"];
+  const sale: Sale =
+    p.status === "sold" ? "sold" : p.status === "draft" ? "draft" : "listed";
+  return {
+    id: p.id,
+    title: p.title,
+    price: p.price,
+    major,
+    sale,
+    createdAt: (p.created_at ?? "").slice(0, 10),
+    listings: {},
+  };
 }
 
 // TODO(연동): GET /api/v1/products (내 상품). 현재는 레이아웃용 목 데이터.
@@ -54,9 +72,25 @@ export default function HomePage() {
   const [cat, setCat] = useState("전체");
   const [tab, setTab] = useState<Sale | "all">("all");
   const [sort, setSort] = useState<(typeof SORTS)[number]["key"]>("recent");
+  const [items, setItems] = useState<MyProduct[]>(MOCK);
+
+  // 실데이터 로드 — 인증/백엔드 미가용 시 목업 유지
+  useEffect(() => {
+    let alive = true;
+    listProducts()
+      .then((rows) => {
+        if (alive && Array.isArray(rows)) setItems(rows.map(mapProduct));
+      })
+      .catch(() => {
+        /* 미인증(401)·오프라인 → 목업 유지 */
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const products = useMemo(() => {
-    let list = MOCK.filter((p) => {
+    let list = items.filter((p) => {
       if (tab !== "all" && p.sale !== tab) return false;
       if (cat === "전체") return true;
       if (cat === "우먼즈웨어" || cat === "맨즈웨어") return p.gender === cat;
@@ -69,7 +103,7 @@ export default function HomePage() {
       return a.price - b.price;
     });
     return list;
-  }, [cat, tab, sort]);
+  }, [cat, tab, sort, items]);
 
   return (
     <main className="mx-auto max-w-[1280px] px-6 py-8">
