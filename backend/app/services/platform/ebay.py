@@ -19,3 +19,6 @@ class EbayAdapter(PlatformAdapter):
 
     async def delete_listing(self, credentials: Credentials, platform_product_id: str) -> None:
         raise NotImplementedError
+
+    async def update_price(self, credentials: Credentials, platform_product_id: str, new_price: int) -> None:
+        raise NotImplementedError

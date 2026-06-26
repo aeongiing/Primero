@@ -48,6 +48,11 @@ class PlatformAdapter(ABC):
         """플랫폼에서 상품 삭제."""
         ...
 
+    @abstractmethod
+    async def update_price(self, credentials: Credentials, platform_product_id: str, new_price: int) -> None:
+        """플랫폼에서 상품 가격 변경."""
+        ...
+
 
 class FormPlatformAdapter(PlatformAdapter):
     """선언적 폼 스펙을 브라우저로 실행하는 공통 어댑터.
@@ -159,3 +164,17 @@ class FormPlatformAdapter(PlatformAdapter):
         await page.goto(self.spec.manage_url_template.format(id=platform_product_id))
         await page.click(self.spec.delete_selector)
         await page.click(self.spec.delete_confirm_selector)
+
+    async def update_price(self, credentials: Credentials, platform_product_id: str, new_price: int) -> None:
+        """플랫폼에서 상품 가격을 변경한다."""
+        page = await self.browser.new_page()
+        await self._login(page, credentials)
+        await page.goto(self.spec.manage_url_template.format(id=platform_product_id))
+        
+        # 가격 수정 필드 찾아서 업데이트
+        if self.spec.price_selector:
+            await page.fill(self.spec.price_selector, str(new_price))
+        
+        # 저장 버튼 클릭
+        if self.spec.save_selector:
+            await page.click(self.spec.save_selector)

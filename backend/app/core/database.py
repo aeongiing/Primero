@@ -21,3 +21,7 @@ class Base(DeclarativeBase):
 async def get_db():
     async with AsyncSessionLocal() as session:
         yield session
+
+
+# 별칭 (일부 코드에서 사용)
+get_async_session = get_db

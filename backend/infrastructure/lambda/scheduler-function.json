@@ -1,0 +1,27 @@
+{
+  "FunctionName": "parapara-scheduler",
+  "Runtime": "python3.11",
+  "Role": "arn:aws:iam::ACCOUNT_ID:role/parapara-scheduler-role",
+  "Handler": "workers.scheduler.handler",
+  "Code": {
+    "ZipFile": "Deployment package required"
+  },
+  "Description": "주기 작업 실행 (미판매 자동 할인)",
+  "Timeout": 300,
+  "MemorySize": 512,
+  "Environment": {
+    "Variables": {
+      "DATABASE_URL": "postgresql+asyncpg://...",
+      "POLLING_INTERVAL_SECONDS": "60",
+      "BROWSER_HEADLESS": "true",
+      "SECRETS_MANAGER_PREFIX": "parapara/platform",
+      "DISCOUNT_WAIT_DAYS": "7",
+      "DISCOUNT_RATE": "0.9",
+      "AWS_REGION": "ap-northeast-2"
+    }
+  },
+  "VpcConfig": {
+    "SubnetIds": ["subnet-xxx"],
+    "SecurityGroupIds": ["sg-xxx"]
+  }
+}

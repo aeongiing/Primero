@@ -35,8 +35,11 @@ class Settings(BaseSettings):
     
     # Poller Worker
     polling_interval_seconds: int = 60
-    browser_headless: bool = True
     secrets_manager_prefix: str = "parapara/platform"
+    
+    # Auto Discount
+    discount_wait_days: int = 7
+    discount_rate: float = 0.9  # 10% 할인
 
     class Config:
         env_file = ".env"

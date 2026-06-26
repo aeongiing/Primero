@@ -91,3 +91,6 @@ class PlatformFormSpec:
     manage_url_template: str = ""            # "{id}" 치환
     delete_selector: str = ""
     delete_confirm_selector: str = ""
+    # 가격 변경
+    price_selector: str = ""                 # 가격 입력 필드
+    save_selector: str = ""                  # 저장/수정 완료 버튼

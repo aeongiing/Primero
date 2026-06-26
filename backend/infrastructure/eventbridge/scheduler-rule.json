@@ -1,0 +1,13 @@
+{
+  "Name": "parapara-weekly-discount",
+  "Description": "1주 이상 미판매 상품 자동 10% 할인",
+  "ScheduleExpression": "rate(1 day)",
+  "State": "ENABLED",
+  "Targets": [
+    {
+      "Id": "1",
+      "Arn": "arn:aws:lambda:ap-northeast-2:ACCOUNT_ID:function:parapara-scheduler",
+      "Input": "{\"task\": \"weekly_discount\"}"
+    }
+  ]
+}
