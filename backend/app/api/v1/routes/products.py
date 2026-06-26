@@ -8,6 +8,8 @@
 import uuid
 from typing import List, Optional
 
+from pydantic import BaseModel
+
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status as http_status
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -66,6 +68,29 @@ async def analyze_images(
         raise HTTPException(status_code=422, detail="분석할 이미지가 없습니다.")
 
     return await analyze_from_bytes(payloads)
+
+
+class FitRecommendationRequest(BaseModel):
+    category: str | None = None
+    size: str | None = None
+    gender: str | None = None
+    chest: int | None = None
+    shoulder: int | None = None
+    sleeve: int | None = None
+    total_length: int | None = None
+
+
+class FitRecommendationResponse(BaseModel):
+    text: str
+
+
+@router.post("/fit-recommendation", response_model=FitRecommendationResponse)
+async def fit_recommendation(body: FitRecommendationRequest):
+    """표기 사이즈 + 실측 → 정핏/오버핏 추천 텍스트(인증 불필요)."""
+    from app.services.ai.classifier import recommend_fit
+
+    text = await recommend_fit(body.model_dump())
+    return FitRecommendationResponse(text=text)
 
 
 @router.post("/{product_id}/images", response_model=list[ImageUploadOut], status_code=201)

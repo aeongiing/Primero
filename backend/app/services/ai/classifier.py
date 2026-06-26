@@ -126,3 +126,70 @@ async def analyze_with_claude(s3_keys: List[str]) -> Dict:
 async def analyze_with_claude_bytes(payloads: List[Tuple[bytes, str]]) -> Dict:
     """업로드된 이미지 바이트를 (S3 없이) 바로 Claude에 전송해 분석한다."""
     return await asyncio.to_thread(_invoke_bytes, payloads)
+
+
+# ─── 핏 추천 (텍스트 전용) ───
+
+_FIT_SYSTEM_PROMPT_FEMALE = """\
+당신은 의류 핏 분석 전문가입니다.
+주어진 카테고리·표기 사이즈·실측(cm)을 바탕으로, 이 옷이
+- 어떤 키/몸무게/체형에게 '정핏'으로 맞는지
+- 어떤 키/몸무게/체형에게 '오버핏'으로 맞는지
+를 한국어로 추천하세요.
+
+규칙:
+- 체형은 '스트레이트 / 웨이브 / 내추럴' 중에서 사용합니다.
+- 실측값이 없으면 표기 사이즈로 일반적인 범위를 추정하되 단정하지 말고 '대략'으로 표현합니다.
+- 키는 범위(예: 160~165cm), 몸무게도 범위로 제시합니다.
+- 과장·확신 없이 2~4문장으로 자연스럽게. 마크다운/JSON 없이 본문 텍스트만 출력하세요."""
+
+_FIT_SYSTEM_PROMPT_DEFAULT = """\
+당신은 의류 핏 분석 전문가입니다.
+주어진 카테고리·표기 사이즈·실측(cm)을 바탕으로, 이 옷이
+- 어떤 키/몸무게에게 '정핏'으로 맞는지
+- 어떤 키/몸무게에게 '오버핏'으로 맞는지
+를 한국어로 추천하세요.
+
+규칙:
+- 실측값이 없으면 표기 사이즈로 일반적인 범위를 추정하되 단정하지 말고 '대략'으로 표현합니다.
+- 키는 범위(예: 170~175cm), 몸무게도 범위로 제시합니다.
+- 과장·확신 없이 2~4문장으로 자연스럽게. 마크다운/JSON 없이 본문 텍스트만 출력하세요."""
+
+
+def _invoke_fit_text(user_text: str, gender: str | None) -> str:
+    import anthropic
+
+    system = _FIT_SYSTEM_PROMPT_FEMALE if gender == "여성의류" else _FIT_SYSTEM_PROMPT_DEFAULT
+
+    client = anthropic.Anthropic(
+        api_key=settings.anthropic_api_key,
+        base_url=settings.anthropic_base_url or None,
+    )
+    message = client.messages.create(
+        model=settings.anthropic_model,
+        max_tokens=400,
+        system=system,
+        messages=[{"role": "user", "content": user_text}],
+    )
+    return message.content[0].text.strip()
+
+
+async def recommend_fit(info: dict) -> str:
+    """카테고리·사이즈·실측 → 정핏/오버핏 추천 텍스트."""
+    lines = [
+        f"카테고리: {info.get('category') or '-'}",
+        f"표기 사이즈: {info.get('size') or '-'}",
+    ]
+    measures = []
+    for key, label in [
+        ("chest", "가슴단면"),
+        ("shoulder", "어깨너비"),
+        ("sleeve", "소매길이"),
+        ("total_length", "총장"),
+    ]:
+        val = info.get(key)
+        if val:
+            measures.append(f"{label} {val}cm")
+    lines.append("실측: " + (", ".join(measures) if measures else "없음(표기 사이즈로 추정)"))
+    user_text = "\n".join(lines) + "\n\n이 옷의 정핏/오버핏 추천을 작성해줘."
+    return await asyncio.to_thread(_invoke_fit_text, user_text, info.get("gender"))
