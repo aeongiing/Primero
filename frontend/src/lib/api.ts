@@ -225,6 +225,28 @@ export function getMetadataOptions(): Promise<unknown> {
   return request("/metadata/options", { auth: false });
 }
 
+export interface PlatformAccountOut {
+  id: string;
+  platform: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export function listPlatformAccounts(): Promise<PlatformAccountOut[]> {
+  return request<PlatformAccountOut[]>("/platform-accounts");
+}
+
+export function connectPlatform(platform: string, session_data: object): Promise<PlatformAccountOut> {
+  return request<PlatformAccountOut>("/platform-accounts/session", {
+    method: "POST",
+    body: { platform, session_data },
+  });
+}
+
+export function disconnectPlatform(accountId: string): Promise<void> {
+  return request<void>(`/platform-accounts/${accountId}`, { method: "DELETE" });
+}
+
 export interface FitRequest {
   category?: string;
   size?: string;

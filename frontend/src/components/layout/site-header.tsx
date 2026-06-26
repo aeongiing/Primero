@@ -1,4 +1,9 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { getToken, clearToken } from "@/lib/api";
 
 function SearchIcon() {
   return (
@@ -10,6 +15,19 @@ function SearchIcon() {
 }
 
 export default function SiteHeader() {
+  const router = useRouter();
+  const [loggedIn, setLoggedIn] = useState(false);
+
+  useEffect(() => {
+    setLoggedIn(!!getToken());
+  }, []);
+
+  const handleLogout = () => {
+    clearToken();
+    setLoggedIn(false);
+    router.push("/login");
+  };
+
   return (
     <header className="border-b">
       {/* 1) 상단 다크 프로모 바 */}
@@ -26,7 +44,7 @@ export default function SiteHeader() {
         </div>
       </div>
 
-      {/* 2) 메인 헤더: 로고 · 내 상품 검색 · 우측 액션 (판매자용) */}
+      {/* 2) 메인 헤더 */}
       <div>
         <div className="mx-auto flex h-16 max-w-[1280px] items-center gap-7 px-6">
           <Link
@@ -53,9 +71,24 @@ export default function SiteHeader() {
             <Link href="/settings" className="hover:text-brand transition-colors">
               설정
             </Link>
-            <Link href="/login" className="hover:text-brand transition-colors">
-              로그인
-            </Link>
+            {loggedIn ? (
+              <>
+                <Link href="/mypage" className="hover:text-brand transition-colors">
+                  마이페이지
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="hover:text-brand transition-colors"
+                >
+                  로그아웃
+                </button>
+              </>
+            ) : (
+              <Link href="/login" className="hover:text-brand transition-colors">
+                로그인
+              </Link>
+            )}
           </nav>
         </div>
       </div>
