@@ -55,8 +55,19 @@ class BunjangAdapter(FormPlatformAdapter):
         save_selector='button[type="submit"]:has-text("수정")',
     )
 
+    async def _screenshot(self, pw_page, name: str) -> None:
+        try:
+            import os
+            os.makedirs("/tmp/bunjang_debug", exist_ok=True)
+            path = f"/tmp/bunjang_debug/{name}.png"
+            await pw_page.screenshot(path=path)
+            logger.info(f"[bunjang] 스크린샷 저장: {path}")
+        except Exception as e:
+            logger.warning(f"[bunjang] 스크린샷 실패: {e}")
+
     async def create_listing(self, credentials: Credentials, payload: ListingPayload) -> str:
         """번개장터 전용 등록 로직 — 카테고리/상품상태를 하드코딩 셀렉터로 처리."""
+        logger.info(f"[bunjang] 등록 시작 — fields: {list(payload.fields.keys())}, images: {len(payload.image_paths)}장")
         page = await self.browser.new_page()
         await self._login(page, credentials)
         await page.goto(self.spec.new_listing_url)
@@ -65,10 +76,14 @@ class BunjangAdapter(FormPlatformAdapter):
         pw_page = page._page
 
         current_url = await page.current_url()
-        logger.info(f"[bunjang] 현재 URL: {current_url}")
+        logger.info(f"[bunjang] goto 후 URL: {current_url}")
+        await self._screenshot(pw_page, "01_after_goto")
+
         if "login" in current_url or "products/new" not in current_url:
             logger.error(f"[bunjang] 등록 페이지 진입 실패 — 세션 만료 의심. URL: {current_url}")
             raise PlatformError(f"번개장터 등록 페이지 진입 실패: {current_url}")
+
+        logger.info("[bunjang] 등록 페이지 진입 성공")
 
         # 1) 사진 업로드 (실패해도 계속 진행)
         if self.spec.image_field and payload.image_paths:
@@ -77,16 +92,22 @@ class BunjangAdapter(FormPlatformAdapter):
                 if pw_input:
                     await pw_page.evaluate("el => el.removeAttribute('hidden')", pw_input)
                     await pw_input.set_input_files(list(payload.image_paths))
+                    logger.info(f"[bunjang] 이미지 업로드 완료: {len(payload.image_paths)}장")
+                else:
+                    logger.warning("[bunjang] #media-input 엘리먼트 없음")
             except Exception as e:
                 logger.warning(f"[bunjang] 이미지 업로드 스킵: {e}")
+        await self._screenshot(pw_page, "02_after_image")
 
         # 2) 상품명
         title = payload.fields.get("title", "")
         try:
             if title:
                 await page.fill('input[name="common.name"]', title)
+                logger.info(f"[bunjang] 상품명 입력 완료: {title[:20]}")
         except Exception as e:
             logger.warning(f"[bunjang] 상품명 입력 스킵: {e}")
+        await self._screenshot(pw_page, "03_after_title")
 
         # 3) 카테고리 (실패해도 계속 진행)
         try:
@@ -101,6 +122,7 @@ class BunjangAdapter(FormPlatformAdapter):
                 }
                 detail = next((v for k, v in sub_map.items() if k in title_lower), "맨투맨")
                 category = f"남성의류 > {category} > {detail}"
+            logger.info(f"[bunjang] 카테고리 시도: {category}")
             if category:
                 for seg in category.split(">"):
                     seg = seg.strip()
@@ -110,21 +132,29 @@ class BunjangAdapter(FormPlatformAdapter):
                             li = await el.evaluate_handle('e => e.closest("li")')
                             await li.as_element().click()
                             await pw_page.wait_for_timeout(800)
+                            logger.info(f"[bunjang] 카테고리 클릭: {seg}")
+                        else:
+                            logger.warning(f"[bunjang] 카테고리 엘리먼트 없음: {seg}")
         except Exception as e:
             logger.warning(f"[bunjang] 카테고리 선택 스킵: {e}")
+        await self._screenshot(pw_page, "04_after_category")
 
         # 4) 상품상태 (실패해도 계속 진행)
         try:
             condition = payload.fields.get("condition", "") or "사용감 없음"
+            logger.info(f"[bunjang] 상품상태 시도: {condition}")
             await page.click('#scroll-condition button')
             await pw_page.wait_for_timeout(500)
             await pw_page.locator(f'li[role="option"]:has-text("{condition}")').click()
+            logger.info(f"[bunjang] 상품상태 완료: {condition}")
         except Exception as e:
             logger.warning(f"[bunjang] 상품상태 선택 스킵: {e}")
+        await self._screenshot(pw_page, "05_after_condition")
 
         # 4.5) 사이즈 선택 (실패해도 계속 진행)
         try:
             size = payload.fields.get("size", "L") or "L"
+            logger.info(f"[bunjang] 사이즈 시도: {size}")
             await page.click('#scroll-option button[aria-haspopup="dialog"]')
             await pw_page.wait_for_timeout(1000)
             size_span = await pw_page.query_selector(f'span:text-is("{size}")')
@@ -136,14 +166,19 @@ class BunjangAdapter(FormPlatformAdapter):
                 if confirm:
                     await confirm.click()
                     await pw_page.wait_for_timeout(500)
+                logger.info(f"[bunjang] 사이즈 완료: {size}")
+            else:
+                logger.warning(f"[bunjang] 사이즈 엘리먼트 없음: {size}")
         except Exception as e:
             logger.warning(f"[bunjang] 사이즈 선택 스킵: {e}")
+        await self._screenshot(pw_page, "06_after_size")
 
         # 5) 설명 (실패해도 계속 진행)
         try:
             desc = payload.fields.get("description", "")
             if desc:
                 await pw_page.fill('textarea', desc)
+                logger.info(f"[bunjang] 설명 입력 완료: {len(desc)}자")
         except Exception as e:
             logger.warning(f"[bunjang] 설명 입력 스킵: {e}")
 
@@ -152,17 +187,24 @@ class BunjangAdapter(FormPlatformAdapter):
             price = payload.fields.get("price", "")
             if price:
                 await page.fill('input[placeholder^="가격을 입력"]', str(price))
+                logger.info(f"[bunjang] 가격 입력 완료: {price}")
         except Exception as e:
             logger.warning(f"[bunjang] 가격 입력 스킵: {e}")
+        await self._screenshot(pw_page, "07_before_submit")
 
         # 7) 등록하기 클릭
+        logger.info("[bunjang] 등록하기 클릭")
         await page.click('button[type="submit"]')
 
         # 등록 후 URL에서 상품 ID 추출 (리다이렉트 대기)
         await page.wait_for_timeout(5000)
         url = await page.current_url()
+        logger.info(f"[bunjang] 등록 후 URL: {url}")
+        await self._screenshot(pw_page, "08_after_submit")
+
         match = re.search(r'/products/(\d+)', url)
         if match:
+            logger.info(f"[bunjang] 등록 성공 — 상품 ID: {match.group(1)}")
             return match.group(1)
 
         # URL에서 못 찾으면 data-pid 시도
