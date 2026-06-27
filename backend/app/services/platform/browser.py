@@ -85,7 +85,8 @@ class PlaywrightPage(BrowserPage):
         await self._page.select_option(selector, value)
 
     async def set_input_files(self, selector: str, files: list[str]) -> None:
-        # hidden 속성 제거 후 파일 설정 (번개장터 #media-input 등 hidden input 대응)
+        # 요소가 DOM에 나타날 때까지 대기 후 hidden 제거
+        await self._page.wait_for_selector(selector, state="attached", timeout=30000)
         await self._page.evaluate(f"document.querySelector('{selector}').removeAttribute('hidden')")
         await self._page.set_input_files(selector, files)
 
