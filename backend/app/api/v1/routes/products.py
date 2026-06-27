@@ -240,7 +240,8 @@ async def publish_product_to_platforms(
             except Exception as e:
                 logging.getLogger(__name__).error(f"백그라운드 발행 실패: {e}")
 
-    background_tasks.add_task(_run_in_background)
+    import asyncio
+    asyncio.ensure_future(_run_in_background())
     return {"status": "publishing", "platforms": platforms}
 
 
