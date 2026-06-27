@@ -41,6 +41,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     const token = getToken();
     if (token) h.set("Authorization", `Bearer ${token}`);
   }
+  h.set("ngrok-skip-browser-warning", "true");
 
   let payload: BodyInit | undefined;
   if (body instanceof FormData) {
