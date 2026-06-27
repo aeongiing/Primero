@@ -30,22 +30,11 @@ async def bunjang_kakao_login(email: str, password: str, session_path: str) -> d
             await page.wait_for_timeout(1500)
 
             # 2. JS로 팝업 오버레이 강제 제거
-            await page.evaluate("""
-                document.querySelectorAll('.bun-ui-portal, [class*="portal"], [class*="nudge"], [class*="overlay"], [class*="modal"]')
-                    .forEach(el => el.remove());
-            """)
+            await page.evaluate("document.querySelectorAll('.bun-ui-portal').forEach(el => el.remove())")
             await page.wait_for_timeout(500)
 
             # 3. 카카오 버튼 JS 직접 클릭 (포인터 이벤트 차단 우회)
-            clicked = await page.evaluate("""
-                const btn = document.querySelector('button[class*="kakao"]') ||
-                            [...document.querySelectorAll('button')].find(b => b.textContent.includes('카카오')) ||
-                            [...document.querySelectorAll('a')].find(a => a.href && a.href.includes('kakao'));
-                if (btn) { btn.click(); return true; }
-                return false;
-            """)
-            if not clicked:
-                raise ValueError("카카오 로그인 버튼을 찾지 못했습니다")
+            await page.evaluate("(document.querySelector('button[class*=\"kakao\"]') || [...document.querySelectorAll('button')].find(b => b.textContent.includes('카카오'))).click()")
             await page.wait_for_timeout(2000)
 
             # 3. 카카오 로그인 팝업/페이지에서 이메일/PW 입력
