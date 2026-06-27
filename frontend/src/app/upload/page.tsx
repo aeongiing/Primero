@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   IMAGE_ORDER_LABELS,
   CONDITION_GRADES,
@@ -108,7 +107,6 @@ const newId = () =>
     : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
 export default function UploadPage() {
-  const router = useRouter();
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -278,8 +276,10 @@ export default function UploadPage() {
       // 플랫폼 발행 (백그라운드 실행 — 즉시 응답)
       if (platforms.length) {
         publishProduct(product.id, platforms.map(toBackendPlatform)).catch(() => {});
+        setSubmitMsg(`등록됐어요! ${platforms.map(toBackendPlatform).join(", ")} 발행 중...`);
+      } else {
+        setSubmitMsg("등록되었어요!");
       }
-      router.push(`/bunjang/${product.id}`);
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) {
         setSubmitMsg("로그인이 필요해요. (백엔드 인증 연동 후 가능)");
