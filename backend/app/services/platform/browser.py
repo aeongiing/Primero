@@ -47,6 +47,9 @@ class BrowserPage(ABC):
     @abstractmethod
     async def current_url(self) -> str: ...
 
+    @abstractmethod
+    async def wait_for_timeout(self, ms: int) -> None: ...
+
 
 class BrowserAutomation(ABC):
     """브라우저 세션 포트. 페이지를 만들고 정리한다."""
@@ -68,7 +71,7 @@ class PlaywrightPage(BrowserPage):
         self._page = page
 
     async def goto(self, url: str) -> None:
-        await self._page.goto(url)
+        await self._page.goto(url, wait_until="networkidle")
 
     async def fill(self, selector: str, value: str) -> None:
         await self._page.fill(selector, value)
@@ -90,6 +93,9 @@ class PlaywrightPage(BrowserPage):
 
     async def current_url(self) -> str:
         return self._page.url
+
+    async def wait_for_timeout(self, ms: int) -> None:
+        await self._page.wait_for_timeout(ms)
 
 
 class PlaywrightBrowser(BrowserAutomation):

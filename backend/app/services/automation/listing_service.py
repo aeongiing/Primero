@@ -87,9 +87,22 @@ async def publish_to_platforms(
         pass  # 각 어댑터가 자체 browser를 가지므로 별도 정리 불필요
 
     # Listing 테이블에 기록
+    # 사용자의 platform_account 조회
+    from app.models.platform_account import PlatformAccount
+    from sqlalchemy import select as sa_select
+
     results = []
     any_listed = False
     for outcome in outcomes:
+        # 해당 플랫폼의 platform_account_id 조회
+        pa_result = await db.execute(
+            sa_select(PlatformAccount.id).where(
+                PlatformAccount.user_id == product.user_id,
+                PlatformAccount.platform == outcome.platform,
+            )
+        )
+        pa_id = pa_result.scalar_one_or_none()
+
         listing = Listing(
             product_id=product.id,
             platform=outcome.platform,
@@ -99,8 +112,7 @@ async def publish_to_platforms(
                 else ListingStatus.pending
             ),
             listed_at=datetime.utcnow(),
-            # platform_account_id 는 계정 연동 후 채움 (임시 product.user_id)
-            platform_account_id=product.user_id,
+            platform_account_id=pa_id or product.user_id,
         )
         db.add(listing)
         results.append({

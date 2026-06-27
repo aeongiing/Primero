@@ -32,7 +32,7 @@ def _client():
     )
 
 
-async async def load_credentials(credential_key: str) -> Credentials:
+async def load_credentials(credential_key: str) -> Credentials:
     """Secrets Manager에서 자격증명을 로드한다.
     
     Args:

@@ -1,3 +1,4 @@
+from __future__ import annotations
 """[여원] 판매 완료 동기화.
 
 한 플랫폼에서 판매 완료가 감지되면 나머지 플랫폼의 리스팅을 자동

@@ -197,16 +197,31 @@ async def create_product(
     # 발행 실패해도 상품 자체는 정상 생성됨(부분 실패 격리).
     # Playwright(브라우저)가 없는 테스트 환경에서는 건너뛴다.
     if body.platforms:
-        try:
-            from app.services.automation.listing_service import publish_to_platforms
-            await publish_to_platforms(product, body.platforms, db)
-            await db.refresh(product)
-        except ImportError:
-            pass  # playwright 미설치 환경(테스트)
-        except Exception:
-            pass  # 발행 실패가 상품 생성을 막지 않음
+        pass  # 발행은 이미지 업로드 후 별도 API로 수행 (POST /products/{id}/publish)
 
     return product
+
+
+class PublishRequest(BaseModel):
+    platforms: list[str]
+
+
+@router.post("/{product_id}/publish")
+async def publish_product_to_platforms(
+    product_id: uuid.UUID,
+    body: PublishRequest,
+    db: AsyncSession = Depends(get_db),
+    user_id: uuid.UUID = Depends(get_current_user_id),
+):
+    """상품을 선택한 플랫폼에 발행한다 (이미지 업로드 완료 후 호출)."""
+    product = await _get_owned_product(product_id, user_id, db)
+    try:
+        from app.services.automation.listing_service import publish_to_platforms
+        results = await publish_to_platforms(product, body.platforms, db)
+        return {"results": results}
+    except Exception as e:
+        await db.rollback()
+        return {"results": [{"platform": p, "status": "failed", "error": str(e)} for p in body.platforms]}
 
 
 @router.get("", response_model=list[ProductOut])

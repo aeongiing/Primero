@@ -14,6 +14,7 @@ import {
   analyzeImages,
   createProduct,
   uploadProductImages,
+  publishProduct,
   fitRecommendation,
   ApiError,
 } from "@/lib/api";
@@ -270,6 +271,14 @@ export default function UploadPage() {
         } catch {
           setSubmitMsg("상품은 저장됐지만 사진 업로드는 실패했어요(S3 권한 확인).");
           return;
+        }
+      }
+      // 플랫폼 발행 (이미지 업로드 완료 후)
+      if (platforms.length) {
+        try {
+          await publishProduct(product.id, platforms.map(toBackendPlatform));
+        } catch {
+          // 발행 실패해도 상품 등록은 성공
         }
       }
       setSubmitMsg("등록되었어요!");

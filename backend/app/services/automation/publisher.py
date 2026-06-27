@@ -1,98 +1,113 @@
-from __future__ import annotations
-"""[여원] 상품 → 다중 플랫폼 발행 오케스트레이션.
+"""[여원] 상품 → 다중 플랫폼 등록 코어 로직.
 
-상품 하나를 선택된 플랫폼들에 올리는 "절차"를 지휘한다:
-  매핑(번역) → 필수값 검사(보류 판단) → 어댑터로 등록 → 결과 보고.
-
-핵심 원칙(부분 실패 격리): 한 플랫폼이 실패해도 나머지 플랫폼 발행은 계속한다.
-
-외부 의존(어댑터/자격증명)은 호출자가 주입한다. 따라서 이 함수 자체는 실제
-사이트 없이 가짜를 주입해 테스트할 수 있다. DB 기록은 호출자(라우트/워커)가
-이 결과(PublishOutcome 목록)를 보고 수행한다.
+listing_service.py 에서 호출한다. 매핑 → 브라우저 자동화 → 결과 반환.
+부분 실패 격리: 한 플랫폼 실패가 다른 플랫폼을 막지 않는다.
 """
+from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+import enum
+import logging
 from dataclasses import dataclass, field
-from enum import Enum
+from typing import Callable, List, Optional
 
 from app.domain.mapping import CanonicalProduct, map_product
-from app.services.platform.base import ListingPayload, PlatformAdapter
+from app.services.platform.base import ListingPayload, PlatformAdapter, PlatformError
 from app.services.platform.browser import Credentials
 
+logger = logging.getLogger(__name__)
 
-class PublishStatus(str, Enum):
-    """플랫폼 1곳에 대한 발행 결과 상태."""
-    listed = "listed"   # 등록 성공
-    held = "held"       # 필수값 부족 → 등록 보류
-    failed = "failed"   # 등록 시도 중 오류
+
+class PublishStatus(str, enum.Enum):
+    listed = "listed"
+    failed = "failed"
+    skipped = "skipped"  # 필수 필드 누락 등
 
 
 @dataclass
 class PublishOutcome:
-    """플랫폼 1곳의 발행 결과."""
     platform: str
     status: PublishStatus
-    platform_product_id: str | None = None
-    missing_required: list[str] = field(default_factory=list)
-    unmapped_fields: dict[str, list[str]] = field(default_factory=dict)
-    error: str | None = None
-
-
-async def publish_to_platform(
-    product: CanonicalProduct,
-    platform: str,
-    adapter_for: Callable[[str], PlatformAdapter],
-    credentials_for: Callable[[str], Credentials],
-    image_paths: tuple[str, ...] = (),
-) -> PublishOutcome:
-    """단일 플랫폼에 발행한다. 예외를 잡아 항상 PublishOutcome 으로 반환한다."""
-    mapping = map_product(product, platform)
-
-    # 필수값이 비면 등록하지 않고 보류(사용자 보완 필요).
-    if not mapping.ok:
-        return PublishOutcome(
-            platform=platform,
-            status=PublishStatus.held,
-            missing_required=mapping.missing_required,
-            unmapped_fields=mapping.unmapped_fields,
-        )
-
-    try:
-        adapter = adapter_for(platform)
-        credentials = credentials_for(platform)
-        payload = ListingPayload(fields=mapping.payload, image_paths=image_paths)
-        platform_product_id = await adapter.create_listing(credentials, payload)
-    except Exception as exc:  # 한 플랫폼 실패가 다른 플랫폼을 막지 않도록 격리
-        return PublishOutcome(
-            platform=platform,
-            status=PublishStatus.failed,
-            unmapped_fields=mapping.unmapped_fields,
-            error=str(exc),
-        )
-
-    return PublishOutcome(
-        platform=platform,
-        status=PublishStatus.listed,
-        platform_product_id=platform_product_id,
-        unmapped_fields=mapping.unmapped_fields,
-    )
+    platform_product_id: Optional[str] = None
+    error: Optional[str] = None
+    missing_required: List[str] = field(default_factory=list)
 
 
 async def publish_product(
-    product: CanonicalProduct,
-    platforms: Sequence[str],
+    canonical: CanonicalProduct,
+    platforms: List[str],
     adapter_for: Callable[[str], PlatformAdapter],
     credentials_for: Callable[[str], Credentials],
-    image_paths: tuple[str, ...] = (),
-) -> list[PublishOutcome]:
-    """선택된 모든 플랫폼에 순차 발행하고 플랫폼별 결과 목록을 반환한다.
+) -> List[PublishOutcome]:
+    """표준_상품을 선택된 플랫폼에 순차 등록한다.
 
-    각 플랫폼은 독립적으로 처리되어, 한 곳의 보류/실패가 다른 곳을 막지 않는다.
+    Args:
+        canonical: 매핑 엔진 입력(정규 상품).
+        platforms: 등록 대상 플랫폼 목록.
+        adapter_for: 플랫폼명 → 어댑터 팩토리.
+        credentials_for: 플랫폼명 → 자격증명 팩토리.
+
+    Returns:
+        플랫폼별 PublishOutcome 리스트.
     """
-    outcomes: list[PublishOutcome] = []
+    outcomes: List[PublishOutcome] = []
+
     for platform in platforms:
-        outcome = await publish_to_platform(
-            product, platform, adapter_for, credentials_for, image_paths
+        # 1) 매핑
+        mapping = map_product(canonical, platform)
+        if not mapping.ok:
+            outcomes.append(PublishOutcome(
+                platform=platform,
+                status=PublishStatus.skipped,
+                missing_required=mapping.missing_required,
+                error=f"필수 필드 누락: {mapping.missing_required}",
+            ))
+            continue
+
+        # 2) 브라우저 자동화로 등록
+        adapter = adapter_for(platform)
+        credentials = credentials_for(platform)
+        payload = ListingPayload(
+            fields=mapping.payload,
+            image_paths=(),  # TODO: S3에서 이미지 다운로드 후 로컬 경로
         )
-        outcomes.append(outcome)
+
+        try:
+            product_id = await adapter.create_listing(credentials, payload)
+            outcomes.append(PublishOutcome(
+                platform=platform,
+                status=PublishStatus.listed,
+                platform_product_id=product_id,
+            ))
+            logger.info(f"✅ {platform} 등록 완료: {product_id}")
+        except PlatformError as e:
+            outcomes.append(PublishOutcome(
+                platform=platform,
+                status=PublishStatus.failed,
+                error=str(e),
+            ))
+            logger.error(f"❌ {platform} 등록 실패: {e}")
+        except Exception as e:
+            outcomes.append(PublishOutcome(
+                platform=platform,
+                status=PublishStatus.failed,
+                error=f"예상치 못한 오류: {type(e).__name__}: {e}",
+            ))
+            logger.error(f"❌ {platform} 예외: {e}")
+        finally:
+            try:
+                await adapter.browser.close()
+            except Exception:
+                pass
+
     return outcomes
+
+
+async def publish_to_platform(
+    canonical: CanonicalProduct,
+    platform: str,
+    adapter_for: Callable[[str], PlatformAdapter],
+    credentials_for: Callable[[str], Credentials],
+) -> PublishOutcome:
+    """단일 플랫폼 등록 (publish_product 의 단건 버전)."""
+    results = await publish_product(canonical, [platform], adapter_for, credentials_for)
+    return results[0]

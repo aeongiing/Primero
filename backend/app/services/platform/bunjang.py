@@ -2,24 +2,17 @@
 
 실제 등록 페이지(https://m.bunjang.co.kr/products/new) DOM 캡처로 확정한 셀렉터.
 
-확정(단순 입력):
+확정:
   - 상품명: input[name="common.name"]
   - 설명:   textarea[placeholder^="브랜드, 모델명"]
   - 가격:   input[placeholder^="가격을 입력"]
   - 사진:   #media-input (type=file)
   - 등록:   button[type="submit"] ("등록하기")
-
-⚠️ 미확정/추가 작업 필요:
-  - 카테고리/상품상태: <select> 가 아니라 버튼→팝업(모달) 선택 방식이라 단순
-    select_option 으로 처리 불가. 별도 멀티스텝 핸들러 필요(현재 fields 에서 제외).
-  - 로그인: 번개장터는 전화번호 인증(SMS OTP) 기반. 자동화에서는 저장된
-    storage_state(쿠키/세션) 로 로그인을 우회한다. login spec 은 폼 로그인
-    폴백용으로 제공하되, 실제 운영은 세션 기반을 권장.
-  - 등록 후 상품 ID: 등록 성공 시 /products/{id} 로 리다이렉트되며 URL에서 추출.
-  번개는 컨디션 등급 칸이 없어 컨디션은 description 에 포함된다(매핑 엔진 처리).
+  - 카테고리: #scroll-categoryId 안의 li를 순서대로 클릭 (텍스트 정확 매칭)
+  - 상품상태: #scroll-condition button → role=option li 텍스트 매칭
 """
 
-from app.services.platform.base import FormPlatformAdapter
+from app.services.platform.base import FormPlatformAdapter, BrowserPage, Credentials, ListingPayload, PlatformError
 from app.services.platform.forms import (
     FieldKind, FormField, LoginSpec, PlatformFormSpec, PopupSelect,
 )
@@ -29,8 +22,6 @@ class BunjangAdapter(FormPlatformAdapter):
     spec = PlatformFormSpec(
         platform="bunjang",
         login=LoginSpec(
-            # 번개장터는 전화번호 + SMS OTP 인증. 폼 로그인은 폴백용.
-            # 운영 시에는 storage_state(브라우저 세션 파일) 사용 권장.
             url="https://m.bunjang.co.kr/login",
             username_selector='input[placeholder*="전화번호"]',
             password_selector='input[placeholder*="인증번호"]',
@@ -42,25 +33,11 @@ class BunjangAdapter(FormPlatformAdapter):
             FormField("title", 'input[name="common.name"]'),
             FormField("description", 'textarea[placeholder^="브랜드, 모델명"]'),
             FormField("price", 'input[placeholder^="가격을 입력"]'),
-            # 카테고리/상품상태는 팝업 선택 방식 → 멀티스텝 핸들러 필요(여기서 제외).
         ),
         image_field=FormField("images", "#media-input", FieldKind.files),
         submit_selector='button[type="submit"]',
-        # 카테고리: 폼 내 #scroll-categoryId 영역의 li 항목을 정확한 텍스트로 단계 클릭.
-        # 헤더 메뉴(여성의류 등)와 텍스트가 겹쳐도 컨테이너 스코프로 충돌을 피한다.
         category_container="#scroll-categoryId",
-        # 상품상태: 버튼 누르면 뜨는 드롭다운에서 선택(번개 5단계).
-        #   새 상품 (미사용) / 사용감 없음 / 사용감 적음 / 사용감 많음 / 고장/파손 상품
-        # 사이즈는 카테고리 선택 후에야 나타나 의존성이 있어 추후 처리.
-        popup_selects=(
-            PopupSelect("condition", "#scroll-condition button", "#scroll-condition"),
-            # 사이즈: 카테고리 선택 후 나타남. 옵션 패널은 포털로 떠서 _valueList 로 스코프.
-            # S 가 XS/2XS 에 포함되므로 정확 일치(exact)로 클릭.
-            PopupSelect("size", "#scroll-option button", 'ul[class*=_valueList_]', exact=True,
-                        confirm='[class*=_panel_] button:has-text("완료")'),
-        ),
-        # 등록 후: /products/{id} 로 리다이렉트됨. URL 에서 ID 파싱하는 게 가장 신뢰도 높지만,
-        # DOM 셀렉터 기반으로도 상품 상세 페이지에서 data-pid 속성으로 추출 가능.
+        popup_selects=(),
         listing_id_selector='[data-pid]',
         listing_id_attribute="data-pid",
         listing_url_template="https://m.bunjang.co.kr/products/{id}",
@@ -69,7 +46,113 @@ class BunjangAdapter(FormPlatformAdapter):
         manage_url_template="https://m.bunjang.co.kr/products/{id}/edit",
         delete_selector='button:has-text("삭제")',
         delete_confirm_selector='button[class*="_confirmBtn_"]:has-text("확인")',
-        # 가격 변경 (수정 페이지에서)
         price_selector='input[placeholder^="가격을 입력"]',
         save_selector='button[type="submit"]:has-text("수정")',
     )
+
+    async def create_listing(self, credentials: Credentials, payload: ListingPayload) -> str:
+        """번개장터 전용 등록 로직 — 카테고리/상품상태를 하드코딩 셀렉터로 처리."""
+        page = await self.browser.new_page()
+        await self._login(page, credentials)
+        await page.goto(self.spec.new_listing_url)
+
+        # Playwright 네이티브 page 접근 (카테고리 정확 매칭에 필요)
+        pw_page = page._page
+
+        # 1) 사진 업로드
+        if self.spec.image_field and payload.image_paths:
+            await page.set_input_files(self.spec.image_field.selector, list(payload.image_paths))
+
+        # 2) 상품명
+        title = payload.fields.get("title", "")
+        if title:
+            await page.fill('input[name="common.name"]', title)
+
+        # 3) 카테고리 — span:text-is 정확 매칭 → 부모 li 클릭
+        category = payload.fields.get("category", "")
+        # 프론트에서 1단계만 오면 기본 경로로 보완
+        if category and ">" not in category:
+            title_lower = title.lower()
+            gender = "남성의류"  # 기본값
+            sub = category  # "상의", "아우터", "하의" 등
+            # 타이틀에서 하위 카테고리 추론
+            sub_map = {
+                "맨투맨": "맨투맨", "후드": "후드티/후드집업", "니트": "니트/스웨터",
+                "셔츠": "셔츠", "반팔": "반팔 티셔츠", "긴팔": "긴팔 티셔츠",
+                "패딩": "패딩", "코트": "코트", "자켓": "자켓",
+                "청바지": "데님/청바지", "슬랙스": "슬랙스",
+            }
+            detail = ""
+            for keyword, bunjang_name in sub_map.items():
+                if keyword in title_lower:
+                    detail = bunjang_name
+                    break
+            if not detail:
+                detail = "맨투맨"  # 기본 폴백
+            category = f"{gender} > {sub} > {detail}"
+        if category:
+            for seg in category.split(">"):
+                seg = seg.strip()
+                if seg:
+                    el = await pw_page.query_selector(f'#scroll-categoryId span:text-is("{seg}")')
+                    if el:
+                        li = await el.evaluate_handle('e => e.closest("li")')
+                        await li.as_element().click()
+                        await pw_page.wait_for_timeout(800)
+
+        # 4) 상품상태 — 드롭다운 열고 옵션 선택
+        condition = payload.fields.get("condition", "")
+        if not condition:
+            condition = "사용감 없음"  # 기본값
+        await page.click('#scroll-condition button')
+        await page.wait_for_timeout(500)
+        await pw_page.locator(f'li[role="option"]:has-text("{condition}")').click()
+
+        # 4.5) 사이즈 선택 (필수)
+        size = payload.fields.get("size", "L") or "L"
+        try:
+            await page.click('#scroll-option button[aria-haspopup="dialog"]')
+            await page.wait_for_timeout(1000)
+            size_span = await pw_page.query_selector(f'span:text-is("{size}")')
+            if size_span:
+                size_li = await size_span.evaluate_handle('e => e.closest("li")')
+                await size_li.as_element().click()
+                await pw_page.wait_for_timeout(500)
+                confirm = await pw_page.query_selector('button:has-text("완료"):not([disabled])')
+                if confirm:
+                    await confirm.click()
+                    await pw_page.wait_for_timeout(500)
+        except Exception:
+            pass  # 사이즈 선택 실패해도 계속 진행
+
+        # 5) 설명
+        desc = payload.fields.get("description", "")
+        if desc:
+            await pw_page.fill('textarea', desc)
+
+        # 6) 가격
+        price = payload.fields.get("price", "")
+        if price:
+            await page.fill('input[placeholder^="가격을 입력"]', str(price))
+
+        # 7) 등록하기 클릭
+        await page.click('button[type="submit"]')
+
+        # 등록 후 URL에서 상품 ID 추출 (리다이렉트 대기)
+        await page.wait_for_timeout(5000)
+        url = await page.current_url()
+        # https://m.bunjang.co.kr/products/123456789
+        import re
+        match = re.search(r'/products/(\d+)', url)
+        if match:
+            return match.group(1)
+
+        # URL에서 못 찾으면 data-pid 시도
+        if self.spec.listing_id_attribute:
+            listing_id = await page.get_attribute(
+                self.spec.listing_id_selector, self.spec.listing_id_attribute
+            )
+            if listing_id:
+                return listing_id
+
+        raise PlatformError("bunjang: 등록 후 상품 ID를 찾지 못했습니다")

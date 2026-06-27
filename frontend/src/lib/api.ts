@@ -170,6 +170,16 @@ export function createProduct(body: ProductCreateBody): Promise<ProductOut> {
   return request<ProductOut>("/products", { method: "POST", body });
 }
 
+export function publishProduct(
+  productId: string,
+  platforms: string[]
+): Promise<{ results: Array<{ platform: string; status: string; error?: string }> }> {
+  return request(`/products/${productId}/publish`, {
+    method: "POST",
+    body: { platforms },
+  });
+}
+
 export function uploadProductImages(
   productId: string,
   files: File[]

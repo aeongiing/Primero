@@ -69,8 +69,8 @@ class FormPlatformAdapter(PlatformAdapter):
 
     async def _login(self, page: BrowserPage, credentials: Credentials) -> None:
         login = self.spec.login
-        # 로그인 URL 이 없으면 저장된 세션(storage_state) 기반으로 간주하고 폼 로그인 생략.
-        if not login.url:
+        # 세션 기반(storage_state)이면 폼 로그인 생략.
+        if not login.url or not credentials.username:
             return
         await page.goto(login.url)
         await page.fill(login.username_selector, credentials.username)
