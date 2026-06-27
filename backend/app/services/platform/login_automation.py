@@ -33,15 +33,23 @@ async def bunjang_kakao_login(email: str, password: str, session_path: str) -> d
             await page.evaluate("document.querySelectorAll('.bun-ui-portal').forEach(el => el.remove())")
             await page.wait_for_timeout(500)
 
-            # 3. 카카오 버튼 클릭 — 팝업이 새 페이지로 열리므로 popup 이벤트로 캐치
-            async with context.expect_page() as popup_info:
-                await page.evaluate(
-                    "(document.querySelector('button[class*=\"kakao\"]') || "
-                    "[...document.querySelectorAll('button')].find(b => b.textContent.includes('카카오'))).click()"
-                )
-            kakao_page = await popup_info.value
-            await kakao_page.wait_for_load_state("domcontentloaded")
-            await kakao_page.wait_for_timeout(1500)
+            # 3. 카카오 버튼 클릭 — 팝업 또는 같은 페이지 이동 모두 처리
+            popup_future = asyncio.ensure_future(context.wait_for_event("page", timeout=5000))
+            await page.evaluate(
+                "(document.querySelector('button[class*=\"kakao\"]') || "
+                "[...document.querySelectorAll('button')].find(b => b.textContent.includes('카카오'))).click()"
+            )
+            await page.wait_for_timeout(2000)
+
+            # 팝업으로 열렸는지, 같은 페이지에서 이동했는지 판단
+            try:
+                kakao_page = await asyncio.wait_for(asyncio.shield(popup_future), timeout=3)
+                await kakao_page.wait_for_load_state("domcontentloaded")
+                await kakao_page.wait_for_timeout(1000)
+            except Exception:
+                # 팝업 없음 — 같은 페이지에서 카카오 페이지로 이동한 경우
+                kakao_page = page
+                await kakao_page.wait_for_timeout(1000)
 
             # 4. 카카오 로그인 폼 입력
             await kakao_page.wait_for_selector(
@@ -51,13 +59,9 @@ async def bunjang_kakao_login(email: str, password: str, session_path: str) -> d
             await kakao_page.fill('#loginId--1, input[name="loginId"], input[placeholder*="이메일"]', email)
             await kakao_page.fill('#password--2, input[name="password"], input[type="password"]', password)
 
-            # 5. 로그인 버튼 클릭 후 팝업 닫힐 때까지 대기
+            # 5. 로그인 버튼 클릭
             await kakao_page.click('button[type="submit"], input[type="submit"], button:has-text("로그인")')
-            try:
-                await kakao_page.wait_for_event("close", timeout=15000)
-            except Exception:
-                pass
-            await page.wait_for_timeout(3000)
+            await page.wait_for_timeout(4000)
 
             # 6. 로그인 성공 확인
             current_url = page.url
