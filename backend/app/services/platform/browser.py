@@ -71,8 +71,8 @@ class PlaywrightPage(BrowserPage):
         self._page = page
 
     async def goto(self, url: str) -> None:
-        await self._page.goto(url, wait_until="networkidle")
-        # 번개장터 앱 다운로드 팝업 제거
+        await self._page.goto(url, wait_until="domcontentloaded", timeout=15000)
+        await self._page.wait_for_timeout(2000)
         try:
             await self._page.evaluate("document.querySelectorAll('.bun-ui-portal').forEach(el => el.remove())")
         except Exception:
@@ -85,10 +85,10 @@ class PlaywrightPage(BrowserPage):
         await self._page.select_option(selector, value)
 
     async def set_input_files(self, selector: str, files: list[str]) -> None:
-        # 요소가 DOM에 나타날 때까지 대기 후 hidden 제거
-        await self._page.wait_for_selector(selector, state="attached", timeout=30000)
-        await self._page.evaluate(f"document.querySelector('{selector}').removeAttribute('hidden')")
-        await self._page.set_input_files(selector, files)
+        el = await self._page.query_selector(selector)
+        if el:
+            await self._page.evaluate("el => el.removeAttribute('hidden')", el)
+            await el.set_input_files(files)
 
     async def click(self, selector: str) -> None:
         await self._page.click(selector)

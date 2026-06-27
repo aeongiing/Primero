@@ -11,7 +11,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status as http_status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile, File, status as http_status
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -210,18 +210,38 @@ class PublishRequest(BaseModel):
 async def publish_product_to_platforms(
     product_id: uuid.UUID,
     body: PublishRequest,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     user_id: uuid.UUID = Depends(get_current_user_id),
 ):
-    """상품을 선택한 플랫폼에 발행한다 (이미지 업로드 완료 후 호출)."""
+    """상품을 선택한 플랫폼에 발행한다. 브라우저 자동화는 백그라운드로 실행."""
+    from app.core.database import AsyncSessionLocal
+    import logging
+
     product = await _get_owned_product(product_id, user_id, db)
-    try:
-        from app.services.automation.listing_service import publish_to_platforms
-        results = await publish_to_platforms(product, body.platforms, db)
-        return {"results": results}
-    except Exception as e:
-        await db.rollback()
-        return {"results": [{"platform": p, "status": "failed", "error": str(e)} for p in body.platforms]}
+    product_id_val = product.id
+    platforms = body.platforms
+
+    async def _run_in_background():
+        async with AsyncSessionLocal() as bg_db:
+            try:
+                from app.services.automation.listing_service import publish_to_platforms
+                from app.models.product import Product as ProductModel
+                from sqlalchemy import select as sa_select
+                from sqlalchemy.orm import selectinload
+                result = await bg_db.execute(
+                    sa_select(ProductModel)
+                    .where(ProductModel.id == product_id_val)
+                    .options(selectinload(ProductModel.images), selectinload(ProductModel.listings))
+                )
+                prod = result.scalar_one_or_none()
+                if prod:
+                    await publish_to_platforms(prod, platforms, bg_db)
+            except Exception as e:
+                logging.getLogger(__name__).error(f"백그라운드 발행 실패: {e}")
+
+    background_tasks.add_task(_run_in_background)
+    return {"status": "publishing", "platforms": platforms}
 
 
 @router.get("", response_model=list[ProductOut])
