@@ -79,12 +79,21 @@ async def connect_via_kakao(
     user_dir.mkdir(parents=True, exist_ok=True)
     session_path = str(user_dir / f"{body.platform}.json")
 
+    import logging as _logging
+    _log = _logging.getLogger(__name__)
     try:
         session_data = await bunjang_kakao_login(
             email=body.kakao_email,
             password=body.kakao_password,
             session_path=session_path,
         )
+        cookie_names = [c.get("name") for c in session_data.get("cookies", [])]
+        _log.info(f"[kakao-login] 저장된 쿠키: {cookie_names}")
+        if "bun_session" not in cookie_names:
+            _log.error(f"[kakao-login] bun_session 없음 — 로그인 실패 가능성. 쿠키: {cookie_names}")
+            raise HTTPException(status_code=400, detail="번개장터 로그인 실패: bun_session 쿠키가 없습니다. 카카오 추가 인증이 필요할 수 있어요.")
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:

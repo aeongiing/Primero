@@ -81,15 +81,19 @@ async def publish_to_platforms(
     browser = PlaywrightBrowser(headless=settings.browser_headless)
 
     def _adapter_for(platform: str) -> PlatformAdapter:
-        # 사용자별 세션 파일 경로 (platform_accounts 에서 저장한 것)
+        import logging as _logging
+        _log = _logging.getLogger(__name__)
         user_session = _AUTH_DIR / "users" / str(product.user_id) / f"{platform}.json"
-        # fallback: 개발자 공용 세션(기존 save_login.py 로 저장한 것)
         dev_session = _AUTH_DIR / f"{platform}.json"
         storage = None
         if user_session.exists():
             storage = str(user_session)
+            _log.info(f"[publish] 사용자 세션 사용: {storage}")
         elif dev_session.exists():
             storage = str(dev_session)
+            _log.info(f"[publish] 공용 세션 fallback 사용: {storage}")
+        else:
+            _log.error(f"[publish] 세션 파일 없음 — user={product.user_id}, platform={platform}")
         pb = PlaywrightBrowser(headless=settings.browser_headless, storage_state=storage)
         return get_adapter(platform, pb)
 
