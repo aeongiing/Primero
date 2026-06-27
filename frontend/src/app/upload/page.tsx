@@ -595,7 +595,7 @@ export default function UploadPage() {
           <Field label="상태" hint={`${condition.toFixed(1)}점 · ${grade.grade}`}>
             <input
               type="range"
-              min={0}
+              min={1}
               max={10}
               step={0.5}
               value={condition}
