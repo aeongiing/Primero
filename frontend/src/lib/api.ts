@@ -83,6 +83,7 @@ export interface ProductImageOut {
   id: string;
   s3_key: string;
   order: number;
+  url: string; // presigned S3 URL (백엔드 생성, 1시간 유효)
 }
 
 export interface ProductOut {

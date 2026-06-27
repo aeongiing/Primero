@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from app.models.product import ProductStatus
 from app.schemas.listing import ListingOut
@@ -12,8 +12,16 @@ class ProductImageOut(BaseModel):
     id: uuid.UUID
     s3_key: str
     order: int
+    url: str = ""
 
     model_config = {"from_attributes": True}
+
+    @model_validator(mode="after")
+    def _compute_url(self) -> "ProductImageOut":
+        if self.s3_key and not self.url:
+            from app.services.media.s3 import get_presigned_url
+            self.url = get_presigned_url(self.s3_key)
+        return self
 
 
 class ProductCreate(BaseModel):

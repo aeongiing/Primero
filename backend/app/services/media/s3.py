@@ -83,6 +83,23 @@ async def upload(file: UploadFile, key: str) -> str:
     return key
 
 
+def get_presigned_url(key: str, expires_in: int = 3600) -> str:
+    """S3 객체의 presigned URL을 반환한다 (기본 1시간).
+
+    버킷/키가 없거나 오류 시 빈 문자열을 반환한다.
+    """
+    if not settings.s3_bucket or not key:
+        return ""
+    try:
+        return _client().generate_presigned_url(
+            "get_object",
+            Params={"Bucket": settings.s3_bucket, "Key": key},
+            ExpiresIn=expires_in,
+        )
+    except (BotoCoreError, ClientError):
+        return ""
+
+
 async def head_bucket() -> bool:
     """버킷 연결 확인용 헬스체크. 접근 가능하면 True."""
     try:

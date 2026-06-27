@@ -16,6 +16,7 @@ interface MyProduct {
   major: "아우터" | "상의" | "하의";
   sale: Sale;
   createdAt: string; // ISO
+  thumbnailUrl?: string;
   listings: Partial<Record<Platform, "success" | "pending" | "failed">>;
 }
 
@@ -25,6 +26,9 @@ function mapProduct(p: ProductOut): MyProduct {
     "상의") as MyProduct["major"];
   const sale: Sale =
     p.status === "sold" ? "sold" : p.status === "draft" ? "draft" : "listed";
+  const thumbnailUrl = [...(p.images ?? [])]
+    .sort((a, b) => a.order - b.order)
+    .find((img) => img.url)?.url;
   return {
     id: p.id,
     title: p.title,
@@ -32,18 +36,19 @@ function mapProduct(p: ProductOut): MyProduct {
     major,
     sale,
     createdAt: (p.created_at ?? "").slice(0, 10),
+    thumbnailUrl,
     listings: {},
   };
 }
 
 // TODO(연동): GET /api/v1/products (내 상품). 현재는 레이아웃용 목 데이터.
 const MOCK: MyProduct[] = [
-  { id: "1", title: "준야와타나베 플란넬 M-65 필드 자켓", price: 585000, gender: "맨즈웨어", major: "아우터", sale: "listed", createdAt: "2026-06-20", listings: { bunjang: "success", joonggonara: "success", fruits: "success", ebay: "pending" } },
-  { id: "2", title: "스톤아일랜드 니트 집업", price: 220000, gender: "맨즈웨어", major: "상의", sale: "listed", createdAt: "2026-06-18", listings: { bunjang: "success", fruits: "success" } },
-  { id: "3", title: "마르지엘라 5포켓 데님", price: 175000, gender: "우먼즈웨어", major: "하의", sale: "sold", createdAt: "2026-06-10", listings: { bunjang: "success", joonggonara: "success", ebay: "success" } },
-  { id: "4", title: "빈티지 체크 울 코트", price: 98000, gender: "우먼즈웨어", major: "아우터", sale: "listed", createdAt: "2026-06-24", listings: { fruits: "success", ebay: "failed" } },
-  { id: "5", title: "리바이스 501 빅사이즈", price: 64000, gender: "맨즈웨어", major: "하의", sale: "draft", createdAt: "2026-06-25", listings: {} },
-  { id: "6", title: "캐시미어 라운드 니트", price: 89000, gender: "우먼즈웨어", major: "상의", sale: "listed", createdAt: "2026-06-15", listings: { bunjang: "success", joonggonara: "pending" } },
+  { id: "1", title: "준야와타나베 플란넬 M-65 필드 자켓", price: 585000, gender: "맨즈웨어", major: "아우터", sale: "listed", createdAt: "2026-06-20", thumbnailUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSINObEa_slTmm57AdENIOVcwxGwZG-OnFhNcQNUJY4vw&s", listings: { bunjang: "success", joonggonara: "success", fruits: "success", ebay: "pending" } },
+  { id: "2", title: "스톤아일랜드 니트 집업", price: 220000, gender: "맨즈웨어", major: "상의", sale: "listed", createdAt: "2026-06-18", thumbnailUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRlmezO-s1jjel_7hvE_qUOYqgooGiEjHeYss_6BZ2ong&s=10", listings: { bunjang: "success", fruits: "success" } },
+  { id: "3", title: "마르지엘라 5포켓 데님", price: 175000, gender: "우먼즈웨어", major: "하의", sale: "sold", createdAt: "2026-06-10", thumbnailUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSGJxh8NostVLbIsObRbKuP4IoVS2T4TVcMxug4Ubhe2g&s=10", listings: { bunjang: "success", joonggonara: "success", ebay: "success" } },
+  { id: "4", title: "빈티지 체크 울 코트", price: 98000, gender: "우먼즈웨어", major: "아우터", sale: "listed", createdAt: "2026-06-24", thumbnailUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTz-BJ7GCGSw_sePkHVLjXaPsLrQ65CisAyrSEqS9pLCA&s=10", listings: { fruits: "success", ebay: "failed" } },
+  { id: "5", title: "리바이스 501 빅사이즈", price: 64000, gender: "맨즈웨어", major: "하의", sale: "draft", createdAt: "2026-06-25", thumbnailUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTVhmpKFbjpDDK3SVIH9OcE4pBYMkNw_p9Ij0qkdjWMNw&s", listings: {} },
+  { id: "6", title: "캐시미어 라운드 니트", price: 89000, gender: "우먼즈웨어", major: "상의", sale: "listed", createdAt: "2026-06-15", thumbnailUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR27-Sc4F5Wh31vLEKUiOOajhh_DflAQeG1a9bPwsbyrw&s", listings: { bunjang: "success", joonggonara: "pending" } },
 ];
 
 const SALE_TABS: { key: Sale | "all"; label: string }[] = [
@@ -181,6 +186,14 @@ export default function HomePage() {
               {products.map((p) => (
                 <Link key={p.id} href={`/products/${p.id}`} className="group">
                   <div className="relative aspect-square overflow-hidden rounded-lg bg-muted">
+                    {p.thumbnailUrl && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={p.thumbnailUrl}
+                        alt={p.title}
+                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                    )}
                     <span
                       className={`absolute left-2 top-2 rounded px-2 py-0.5 text-xs font-bold ${SALE_BADGE[p.sale].cls}`}
                     >
