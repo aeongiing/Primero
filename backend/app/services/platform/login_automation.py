@@ -29,9 +29,18 @@ async def bunjang_kakao_login(email: str, password: str, session_path: str) -> d
             await page.goto("https://m.bunjang.co.kr/login", wait_until="domcontentloaded")
             await page.wait_for_timeout(1500)
 
-            # 2. 카카오 로그인 버튼 클릭
+            # 2. 앱 다운로드 팝업 닫기 (bun-ui-portal)
+            try:
+                close_btn = page.locator('.bun-ui-portal button, [class*="_app-nudge"] button, [class*="close"], [aria-label*="닫기"]')
+                if await close_btn.first.is_visible(timeout=3000):
+                    await close_btn.first.click()
+                    await page.wait_for_timeout(500)
+            except Exception:
+                pass
+
+            # 3. 카카오 로그인 버튼 클릭 (팝업이 있으면 force=True로 강제 클릭)
             kakao_btn = page.locator('a[href*="kakao"], button:has-text("카카오"), a:has-text("카카오")')
-            await kakao_btn.first.click()
+            await kakao_btn.first.click(force=True)
             await page.wait_for_timeout(2000)
 
             # 3. 카카오 로그인 팝업/페이지에서 이메일/PW 입력
