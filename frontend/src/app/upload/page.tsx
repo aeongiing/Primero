@@ -573,12 +573,10 @@ export default function UploadPage() {
               disabled={fitLoading}
               className="flex w-full items-center justify-center gap-2 rounded-lg border border-primary bg-accent px-4 py-3 text-sm font-bold text-primary transition-colors hover:bg-accent/70 disabled:opacity-50"
             >
-              {fitLoading ? "분석 중…" : "AI 핏 추천 받기 (정핏·오버핏)"}
+              {fitLoading ? "분석 중…" : fitAdded ? "추가 완료!" : "AI 핏 추천 받기 (정핏·오버핏)"}
             </button>
             {fitError && <p className="mt-1 text-xs text-destructive">{fitError}</p>}
-            {fitAdded ? (
-              <p className="mt-2 text-xs font-medium text-brand">추가 완료!</p>
-            ) : fitText && (
+            {!fitAdded && fitText && (
               <div className="mt-2 rounded-md border border-border bg-muted/40 p-3">
                 <p className="whitespace-pre-line text-sm leading-relaxed">{fitText}</p>
                 <button
@@ -595,6 +593,7 @@ export default function UploadPage() {
                 </button>
               </div>
             )}
+
           </Field>
 
           <Field label="상태" hint={`${condition.toFixed(1)}점 · ${grade.grade}`}>
