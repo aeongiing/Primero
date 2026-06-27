@@ -37,6 +37,7 @@ async def publish_product(
     platforms: List[str],
     adapter_for: Callable[[str], PlatformAdapter],
     credentials_for: Callable[[str], Credentials],
+    image_paths: tuple = (),
 ) -> List[PublishOutcome]:
     """표준_상품을 선택된 플랫폼에 순차 등록한다.
 
@@ -68,7 +69,7 @@ async def publish_product(
         credentials = credentials_for(platform)
         payload = ListingPayload(
             fields=mapping.payload,
-            image_paths=(),  # TODO: S3에서 이미지 다운로드 후 로컬 경로
+            image_paths=image_paths,
         )
 
         try:
