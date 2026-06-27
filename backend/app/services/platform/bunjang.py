@@ -64,6 +64,12 @@ class BunjangAdapter(FormPlatformAdapter):
         # Playwright 네이티브 page 접근 (카테고리 정확 매칭에 필요)
         pw_page = page._page
 
+        current_url = await page.current_url()
+        logger.info(f"[bunjang] 현재 URL: {current_url}")
+        if "login" in current_url or "products/new" not in current_url:
+            logger.error(f"[bunjang] 등록 페이지 진입 실패 — 세션 만료 의심. URL: {current_url}")
+            raise PlatformError(f"번개장터 등록 페이지 진입 실패: {current_url}")
+
         # 1) 사진 업로드 (실패해도 계속 진행)
         if self.spec.image_field and payload.image_paths:
             try:
