@@ -652,6 +652,16 @@ export default function UploadPage() {
                   </button>
                 );
               })}
+              {(["fruits", "ebay"] as const).map((p) => (
+                <div
+                  key={p}
+                  className="flex items-center justify-center gap-2 rounded-lg border border-border px-3 py-3 text-sm font-medium text-muted-foreground opacity-50 cursor-not-allowed"
+                >
+                  <span className="size-2.5 rounded-full" style={{ background: PLATFORMS[p].color }} aria-hidden />
+                  {PLATFORMS[p].label}
+                  <span className="text-[10px]">지원예정</span>
+                </div>
+              ))}
             </div>
           </Field>
         </div>
