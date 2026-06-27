@@ -72,6 +72,11 @@ class PlaywrightPage(BrowserPage):
 
     async def goto(self, url: str) -> None:
         await self._page.goto(url, wait_until="networkidle")
+        # 번개장터 앱 다운로드 팝업 제거
+        try:
+            await self._page.evaluate("document.querySelectorAll('.bun-ui-portal').forEach(el => el.remove())")
+        except Exception:
+            pass
 
     async def fill(self, selector: str, value: str) -> None:
         await self._page.fill(selector, value)
