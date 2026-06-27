@@ -131,7 +131,13 @@ class PlaywrightBrowser(BrowserAutomation):
 
     async def new_page(self) -> BrowserPage:
         await self._ensure_browser()
-        kwargs: dict = {}
+        kwargs: dict = {
+            "user_agent": (
+                "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) "
+                "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+            ),
+            "viewport": {"width": 390, "height": 844},
+        }
         if self._storage_state and Path(self._storage_state).exists():
             kwargs["storage_state"] = self._storage_state
         context = await self._browser.new_context(**kwargs)
