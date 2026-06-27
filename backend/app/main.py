@@ -46,7 +46,7 @@ app.add_middleware(
         "https://paraparavintage-pdu3c4ru7-aeongiings-projects.vercel.app",  # Vercel Preview
         "https://parapara-vintage.vercel.app",  # Vercel alias
     ],
-    allow_origin_regex=r"(http://localhost:\d+|https://.*\.vercel\.app|https://.*\.ngrok-free\.app|https://.*\.ngrok-free\.dev)",
+    allow_origin_regex=r"(http://localhost:\d+|https://.*\.vercel\.app|https://.*\.ngrok-free\.app|https://.*\.ngrok-free\.dev|https://.*\.trycloudflare\.com)",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
