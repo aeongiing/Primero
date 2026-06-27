@@ -276,12 +276,23 @@ export default function UploadPage() {
       // 플랫폼 발행 (이미지 업로드 완료 후)
       if (platforms.length) {
         try {
-          await publishProduct(product.id, platforms.map(toBackendPlatform));
-        } catch {
-          // 발행 실패해도 상품 등록은 성공
+          const publishResult = await publishProduct(product.id, platforms.map(toBackendPlatform));
+          const failed = publishResult.results.filter((r) => r.status === "failed" || r.status === "held");
+          const succeeded = publishResult.results.filter((r) => r.status === "listed");
+          if (succeeded.length > 0) {
+            setSubmitMsg(`등록되었어요! (${succeeded.map((r) => r.platform).join(", ")} 발행 완료)`);
+          } else if (failed.length > 0) {
+            const errMsg = failed.map((r) => `${r.platform}: ${r.error ?? "실패"}`).join(" / ");
+            setSubmitMsg(`상품은 저장됐지만 플랫폼 발행 실패: ${errMsg}`);
+          } else {
+            setSubmitMsg("등록되었어요!");
+          }
+        } catch (e) {
+          setSubmitMsg(`상품은 저장됐지만 발행 오류: ${e instanceof Error ? e.message : "알 수 없는 오류"}`);
         }
+      } else {
+        setSubmitMsg("등록되었어요!");
       }
-      setSubmitMsg("등록되었어요!");
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) {
         setSubmitMsg("로그인이 필요해요. (백엔드 인증 연동 후 가능)");
