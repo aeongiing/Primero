@@ -23,6 +23,7 @@ from app.core.deps import get_db, get_current_user_id
 from app.domain.mapping.config import ACTIVE_PLATFORMS
 from app.models.platform_account import PlatformAccount
 from app.schemas.platform import PlatformAccountOut
+from app.services.platform.login_automation import bunjang_kakao_login
 
 router = APIRouter(prefix="/platform-accounts", tags=["platform-accounts"])
 
@@ -53,6 +54,65 @@ async def list_accounts(
         )
     )
     return list(result.scalars().all())
+
+
+class KakaoLoginBody(BaseModel):
+    platform: str  # "bunjang" 만 지원
+    kakao_email: str
+    kakao_password: str
+
+
+@router.post("/kakao-login", response_model=PlatformAccountOut, status_code=201)
+async def connect_via_kakao(
+    body: KakaoLoginBody,
+    db: AsyncSession = Depends(get_db),
+    user_id: uuid.UUID = Depends(get_current_user_id),
+):
+    """카카오 이메일/비밀번호로 번개장터에 로그인해 세션을 저장한다.
+
+    비밀번호는 로그인에만 사용하고 저장하지 않는다.
+    """
+    if body.platform != "bunjang":
+        raise HTTPException(status_code=422, detail="현재 번개장터만 지원합니다")
+
+    user_dir = _SESSION_DIR / str(user_id)
+    user_dir.mkdir(parents=True, exist_ok=True)
+    session_path = str(user_dir / f"{body.platform}.json")
+
+    try:
+        session_data = await bunjang_kakao_login(
+            email=body.kakao_email,
+            password=body.kakao_password,
+            session_path=session_path,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"로그인 자동화 실패: {e}")
+
+    # DB 기록
+    result = await db.execute(
+        select(PlatformAccount).where(
+            PlatformAccount.user_id == user_id,
+            PlatformAccount.platform == body.platform,
+        )
+    )
+    account = result.scalar_one_or_none()
+    if account is None:
+        account = PlatformAccount(
+            user_id=user_id,
+            platform=body.platform,
+            credential_key=session_path,
+            is_active=True,
+        )
+        db.add(account)
+    else:
+        account.credential_key = session_path
+        account.is_active = True
+
+    await db.commit()
+    await db.refresh(account)
+    return account
 
 
 @router.post("/session", response_model=PlatformAccountOut, status_code=201)

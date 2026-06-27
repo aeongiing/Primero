@@ -100,6 +100,16 @@ def get_presigned_url(key: str, expires_in: int = 3600) -> str:
         return ""
 
 
+def _get_object(key: str) -> bytes:
+    resp = _client().get_object(Bucket=settings.s3_bucket, Key=key)
+    return resp["Body"].read()
+
+
+async def download(key: str) -> bytes:
+    """S3에서 객체를 다운로드해 바이트로 반환한다."""
+    return await asyncio.to_thread(_get_object, key)
+
+
 async def head_bucket() -> bool:
     """버킷 연결 확인용 헬스체크. 접근 가능하면 True."""
     try:

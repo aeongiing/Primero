@@ -255,6 +255,17 @@ export function connectPlatform(platform: string, session_data: object): Promise
   });
 }
 
+export function connectViaKakao(
+  platform: string,
+  kakao_email: string,
+  kakao_password: string
+): Promise<PlatformAccountOut> {
+  return request<PlatformAccountOut>("/platform-accounts/kakao-login", {
+    method: "POST",
+    body: { platform, kakao_email, kakao_password },
+  });
+}
+
 export function disconnectPlatform(accountId: string): Promise<void> {
   return request<void>(`/platform-accounts/${accountId}`, { method: "DELETE" });
 }

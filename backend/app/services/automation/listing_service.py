@@ -8,6 +8,8 @@
 이 함수의 호출자만 워커로 옮기면 된다.
 """
 
+import asyncio
+import tempfile
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -22,9 +24,28 @@ from app.services.platform.base import PlatformAdapter, ListingPayload
 from app.services.platform.browser import Credentials, PlaywrightBrowser
 from app.services.platform.registry import get_adapter
 from app.core.config import settings
+from app.services.media.s3 import download as s3_download
 
 # 세션 파일 디렉터리 (backend/auth/)
 _AUTH_DIR = Path(__file__).resolve().parent.parent.parent / "auth"
+
+
+async def _download_images_to_tempdir(images) -> tuple[list[str], tempfile.TemporaryDirectory]:
+    """상품 이미지를 S3에서 임시 디렉터리로 내려받는다. 경로 목록과 tmpdir 반환."""
+    tmpdir = tempfile.TemporaryDirectory()
+    paths: list[str] = []
+    for img in sorted(images, key=lambda x: x.order):
+        if not img.s3_key:
+            continue
+        try:
+            data = await s3_download(img.s3_key)
+            ext = ".jpg"
+            tmp_path = Path(tmpdir.name) / f"{img.order}{ext}"
+            tmp_path.write_bytes(data)
+            paths.append(str(tmp_path))
+        except Exception:
+            pass  # 이미지 1장 실패해도 나머지 계속
+    return paths, tmpdir
 
 
 def _to_canonical(product: Product) -> CanonicalProduct:
@@ -76,15 +97,24 @@ async def publish_to_platforms(
         # 세션 기반이라 username/password 불필요. 빈 값 전달(폼 로그인 생략됨).
         return Credentials(username="", password="")
 
+    # S3에서 이미지 임시 다운로드
+    image_paths: tuple[str, ...] = ()
+    tmpdir = None
+    if product.images:
+        paths, tmpdir = await _download_images_to_tempdir(product.images)
+        image_paths = tuple(paths)
+
     try:
         outcomes = await publish_product(
             canonical,
             platforms,
             adapter_for=_adapter_for,
             credentials_for=_credentials_for,
+            image_paths=image_paths,
         )
     finally:
-        pass  # 각 어댑터가 자체 browser를 가지므로 별도 정리 불필요
+        if tmpdir:
+            tmpdir.cleanup()
 
     # Listing 테이블에 기록
     # 사용자의 platform_account 조회
