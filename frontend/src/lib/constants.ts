@@ -120,5 +120,5 @@ export const CATEGORY_TREE: Record<string, Record<string, string[]>> = {
 export const LABEL_SIZES = ["S", "M", "L"] as const;
 
 // 업로드 대상 플랫폼 — 1차(웹): 번개·중고나라·fruits·eBay. 차란·당근은 모바일 단계.
-export const UPLOAD_PLATFORMS: Platform[] = ["bunjang", "joonggonara", "fruits", "ebay"];
+export const UPLOAD_PLATFORMS: Platform[] = ["bunjang", "joonggonara"];
 export const LATER_PLATFORMS: Platform[] = ["charan", "karrot"];

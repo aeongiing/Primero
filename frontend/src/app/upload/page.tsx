@@ -270,7 +270,7 @@ export default function UploadPage() {
           return;
         }
       }
-      setSubmitMsg("등록되었어요 ✅");
+      setSubmitMsg("등록되었어요!");
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) {
         setSubmitMsg("로그인이 필요해요. (백엔드 인증 연동 후 가능)");
