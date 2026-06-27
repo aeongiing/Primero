@@ -29,9 +29,13 @@ async def bunjang_kakao_login(email: str, password: str, session_path: str) -> d
             await page.goto("https://m.bunjang.co.kr/login", wait_until="domcontentloaded")
             await page.wait_for_timeout(1500)
 
-            # 2. 카카오 로그인 버튼 클릭
-            kakao_btn = page.locator('a[href*="kakao"], button:has-text("카카오"), a:has-text("카카오")')
-            await kakao_btn.first.click()
+            # 2. 앱 다운로드 팝업 제거 후 카카오 버튼 JS 클릭
+            await page.evaluate("document.querySelectorAll('.bun-ui-portal').forEach(el => el.remove())")
+            await page.wait_for_timeout(300)
+            await page.evaluate(
+                "(document.querySelector('button[class*=\"kakao\"]') || "
+                "[...document.querySelectorAll('button')].find(b => b.textContent.includes('카카오'))).click()"
+            )
             await page.wait_for_timeout(2000)
 
             # 3. 카카오 로그인 팝업/페이지에서 이메일/PW 입력
