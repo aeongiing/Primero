@@ -133,7 +133,11 @@ class FormPlatformAdapter(PlatformAdapter):
             pass
 
         if self.spec.image_field is not None and payload.image_paths:
-            await page.set_input_files(self.spec.image_field.selector, list(payload.image_paths))
+            try:
+                await page.set_input_files(self.spec.image_field.selector, list(payload.image_paths))
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(f"[{self.platform}] 이미지 업로드 스킵: {e}")
 
         # 버튼→드롭다운 단일 선택(상품상태/사이즈 등)
         for ps in self.spec.popup_selects:
