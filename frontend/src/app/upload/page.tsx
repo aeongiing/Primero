@@ -123,6 +123,7 @@ export default function UploadPage() {
   const [fitText, setFitText] = useState("");
   const [fitLoading, setFitLoading] = useState(false);
   const [fitError, setFitError] = useState<string | null>(null);
+  const [fitAdded, setFitAdded] = useState(false);
   const [colors, setColors] = useState<string[]>([]);
   const [shippingFee, setShippingFee] = useState("");
   const [price, setPrice] = useState("");
@@ -208,6 +209,7 @@ export default function UploadPage() {
     if (fitLoading) return;
     setFitLoading(true);
     setFitError(null);
+    setFitAdded(false);
     try {
       const { text } = await fitRecommendation({
         category: major || undefined,
@@ -574,16 +576,19 @@ export default function UploadPage() {
               {fitLoading ? "분석 중…" : "AI 핏 추천 받기 (정핏·오버핏)"}
             </button>
             {fitError && <p className="mt-1 text-xs text-destructive">{fitError}</p>}
-            {fitText && (
+            {fitAdded ? (
+              <p className="mt-2 text-xs font-medium text-brand">추가 완료!</p>
+            ) : fitText && (
               <div className="mt-2 rounded-md border border-border bg-muted/40 p-3">
                 <p className="whitespace-pre-line text-sm leading-relaxed">{fitText}</p>
                 <button
                   type="button"
-                  onClick={() =>
+                  onClick={() => {
                     setDescription((d) =>
                       d ? `${d}\n\n[핏 추천]\n${fitText}` : `[핏 추천]\n${fitText}`
-                    )
-                  }
+                    );
+                    setFitAdded(true);
+                  }}
                   className="mt-2 rounded-md border border-border px-2.5 py-1 text-xs font-medium transition-colors hover:bg-muted"
                 >
                   설명에 추가
