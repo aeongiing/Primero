@@ -122,6 +122,16 @@ class FormPlatformAdapter(PlatformAdapter):
             else:
                 await page.fill(f.selector, str(value))
 
+        # 현재 URL 로깅 (세션 만료 시 로그인 페이지로 튕김 확인용)
+        import logging, time
+        logger = logging.getLogger(__name__)
+        current_url = await page.current_url()
+        logger.warning(f"[{self.platform}] 등록 페이지 현재 URL: {current_url}")
+        try:
+            await page._page.screenshot(path=f"/tmp/{self.platform}_{int(time.time())}.png")
+        except Exception:
+            pass
+
         if self.spec.image_field is not None and payload.image_paths:
             await page.set_input_files(self.spec.image_field.selector, list(payload.image_paths))
 
